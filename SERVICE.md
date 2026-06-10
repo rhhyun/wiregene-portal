@@ -1,6 +1,6 @@
-﻿# Wiregene Portal
+# Wiregene Portal
 
-Standalone repository exported from esearch-briefing-platform.
+Standalone repository exported from `research-briefing-platform`.
 
 ## Service Boundary
 
@@ -9,19 +9,19 @@ Standalone repository exported from esearch-briefing-platform.
 - Synology source directory: /volume1/docker/wiregene-portal
 - Runtime directory: /volume1/docker/portal
 
-The source is intentionally copied rather than shared with search.wiregene.com
+The source is intentionally copied rather than shared with `search.wiregene.com`
 so deployments, Vercel aliases, Synology containers, and environment variables
 cannot overwrite each other.
 
 ## First Commit
 
-`powershell
+```powershell
 git init
 git add .
 git commit -m "Initialize Wiregene Portal standalone app"
 git branch -M main
-git remote add origin https://github.com/rhhyun/wiregene-portal.git
+git remote add origin https://github.com/rhhyun/empty1.git
 git push -u origin main
-`
+```
 
-Set WIREGENE_APP_MODE=portal in Vercel and Synology.
+Set `WIREGENE_APP_MODE=portal` in Vercel and Synology.
