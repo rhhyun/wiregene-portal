@@ -32,6 +32,15 @@ was updated correctly but browsers are still reaching Vercel. Fix Cloudflare DNS
 and the DSM reverse proxy first, then remove the Vercel alias for
 `portal.wiregene.com`.
 
+The required public route is:
+
+- DSM reverse proxy source: `HTTPS portal.wiregene.com:443`
+- DSM reverse proxy destination: `HTTP 127.0.0.1:3002`
+- Cloudflare DNS: `portal.wiregene.com` must point to the Synology public
+  endpoint, not Vercel `76.76.21.21`
+- Vercel: remove the `portal.wiregene.com` alias/domain binding only after the
+  Synology route works
+
 ## Required Source
 
 The shared GitHub source should exist at:
