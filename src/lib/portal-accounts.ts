@@ -96,6 +96,10 @@ export function portalSiteIds() {
   return portalSites.map((site) => site.id);
 }
 
+export function portalAccountStorageWriteReadiness() {
+  return portalAccountStorage.writeReadiness();
+}
+
 export async function listPortalAccountSummaries() {
   const data = await portalAccountStorage.read();
   return data.accounts

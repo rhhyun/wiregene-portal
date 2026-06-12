@@ -27,6 +27,7 @@ type GrantStorageErrorDetails = {
   message: string;
   cause?: string;
   backupPath?: string;
+  runtime?: string;
 };
 
 export class GrantStorageError extends Error {
@@ -85,6 +86,12 @@ function isServerlessReadOnlyPath(targetPath: string) {
   );
 }
 
+function runtimeLabel() {
+  if (process.env.VERCEL) return "vercel";
+  if (process.env.AWS_LAMBDA_FUNCTION_NAME) return "aws-lambda";
+  return "node";
+}
+
 export function grantStorageErrorDetails(error: unknown) {
   if (error instanceof GrantStorageError) return error.details;
   if (error instanceof Error) return { message: error.message };
@@ -98,6 +105,38 @@ export function createGrantJsonStorage<T>(options: GrantJsonStorageOptions<T>) {
 
   return {
     path: filePath,
+    writeReadiness() {
+      const backend = grantStorageBackend(options);
+      const storagePath = backend === "google-drive" ? `google-drive:${driveFileName()}` : filePath();
+      const runtime = runtimeLabel();
+
+      if (backend !== "google-drive" && isServerlessReadOnlyPath(storagePath)) {
+        return {
+          writable: false,
+          backend,
+          path: storagePath,
+          runtime,
+          details: {
+            label: options.label,
+            operation: "write",
+            path: storagePath,
+            backend,
+            code: "SERVERLESS_LOCAL_STORAGE",
+            runtime,
+            message: options.localReadOnlyMessage ??
+              "Local JSON grant storage cannot write under /var/task. Set REPORT_STORAGE_BACKEND=google-drive or GRANT_STORAGE_BACKEND=google-drive in Vercel.",
+          },
+        };
+      }
+
+      return {
+        writable: true,
+        backend,
+        path: storagePath,
+        runtime,
+        details: undefined,
+      };
+    },
     async read() {
       if (isGoogleDriveGrantStorage(options)) {
         const raw = await readGoogleDriveData(options.label, driveFileName(), driveFileId());
@@ -135,6 +174,7 @@ export function createGrantJsonStorage<T>(options: GrantJsonStorageOptions<T>) {
           path: targetPath,
           backend: grantStorageBackend(options),
           code: "SERVERLESS_LOCAL_STORAGE",
+          runtime: runtimeLabel(),
           message: options.localReadOnlyMessage ??
             "Local JSON grant storage cannot write under /var/task. Set REPORT_STORAGE_BACKEND=google-drive or GRANT_STORAGE_BACKEND=google-drive in Vercel.",
         });

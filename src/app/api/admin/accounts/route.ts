@@ -8,6 +8,7 @@ import {
 } from "@/lib/basic-auth-users";
 import { grantStorageErrorDetails } from "@/lib/grant-storage";
 import {
+  portalAccountStorageWriteReadiness,
   createPortalAccount,
   listPortalAccountSummaries,
   portalSites,
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
 
   const mode = getWiregeneAppMode(request.headers.get("host"));
   const environmentAccounts = getBasicAuthAccountSummaries();
+  const storageWriteReadiness = portalAccountStorageWriteReadiness();
   let portalAccounts: Awaited<ReturnType<typeof listPortalAccountSummaries>> = [];
   let portalAccountStorageError: ReturnType<typeof grantStorageErrorDetails> | undefined;
 
@@ -43,8 +45,9 @@ export async function GET(request: Request) {
       sites: portalSites,
       siteAccountLists: buildSiteAccountLists(accounts),
       managedBy: mode === "portal" ? "Portal account storage + Vercel Basic Auth" : "Vercel Environment Variables",
-      writable: mode === "portal" && !portalAccountStorageError,
-      portalAccountStorageError,
+      writable: mode === "portal" && storageWriteReadiness.writable && !portalAccountStorageError,
+      portalAccountStorageError: portalAccountStorageError ?? storageWriteReadiness.details,
+      portalAccountStorage: storageWriteReadiness,
     },
     {
       headers: {
@@ -57,6 +60,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   if (!isPortalMode(request)) return portalOnlyResponse();
   if (!(await isAuthenticatedAdminRequest(request))) return authRequiredResponse();
+  const storageWriteReadiness = portalAccountStorageWriteReadiness();
+  if (!storageWriteReadiness.writable) return storageNotWritableResponse(storageWriteReadiness.details);
 
   try {
     const payload = (await request.json()) as {
@@ -83,6 +88,8 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   if (!isPortalMode(request)) return portalOnlyResponse();
   if (!(await isAuthenticatedAdminRequest(request))) return authRequiredResponse();
+  const storageWriteReadiness = portalAccountStorageWriteReadiness();
+  if (!storageWriteReadiness.writable) return storageNotWritableResponse(storageWriteReadiness.details);
 
   try {
     const payload = (await request.json()) as {
@@ -148,6 +155,16 @@ async function isAuthenticatedAdminRequest(request: Request) {
   }).catch(() => null);
 
   return portalAccount?.role === "admin";
+}
+
+function storageNotWritableResponse(details: ReturnType<typeof portalAccountStorageWriteReadiness>["details"]) {
+  return NextResponse.json(
+    {
+      error: details?.message ?? "Portal account storage is not writable.",
+      details,
+    },
+    { status: 409 },
+  );
 }
 
 type AdminAccountSummary = Awaited<ReturnType<typeof listPortalAccountSummaries>>[number] | ReturnType<typeof getBasicAuthAccountSummaries>[number];

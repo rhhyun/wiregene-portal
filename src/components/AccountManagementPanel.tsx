@@ -66,6 +66,7 @@ type ApiErrorDetails = {
   message?: string;
   cause?: string;
   backupPath?: string;
+  runtime?: string;
 };
 
 type AccountApiPayload = {
@@ -473,7 +474,7 @@ async function getAccountState(): Promise<AccountState> {
     const accounts = payload.accounts ?? [];
     const sites = payload.sites ?? [];
     const warning = payload.portalAccountStorageError
-      ? formatApiError("Portal 계정 저장소를 읽지 못했습니다.", payload.portalAccountStorageError)
+      ? formatApiError("Portal 계정 저장소를 사용할 수 없습니다.", payload.portalAccountStorageError)
       : undefined;
 
     return {
@@ -594,6 +595,7 @@ function formatApiError(message: string, details?: ApiErrorDetails) {
     details.path ? `path=${details.path}` : undefined,
     details.operation ? `operation=${details.operation}` : undefined,
     details.backend ? `backend=${details.backend}` : undefined,
+    details.runtime ? `runtime=${details.runtime}` : undefined,
     details.cause ? `cause=${details.cause}` : undefined,
     details.backupPath ? `backup=${details.backupPath}` : undefined,
   ].filter(Boolean);
