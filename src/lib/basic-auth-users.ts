@@ -15,7 +15,16 @@ export type BasicAuthAccountSummary = {
   sites: string[];
 };
 
-export const WIREGENE_ADMIN_SITE_IDS = ["portal", "search", "meta", "hyunlab", "sci-experiment", "behavior", "human"];
+export const WIREGENE_ADMIN_SITE_IDS = [
+  "portal",
+  "homepage-admin",
+  "search",
+  "meta",
+  "hyunlab",
+  "sci-experiment",
+  "behavior",
+  "human",
+];
 
 export function getBasicAuthCredentialsFromEnv(env: BasicAuthEnv = process.env) {
   const credentials: BasicAuthCredential[] = [];

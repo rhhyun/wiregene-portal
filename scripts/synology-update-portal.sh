@@ -33,7 +33,7 @@ run() {
 }
 
 version_from_source() {
-  sed -n 's/.*BRIEFING_VERSION = "\([^"]*\)".*/\1/p' "$APP_DIR/src/lib/version.ts" | head -n 1
+  sed -n 's/^export const BRIEFING_VERSION[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$APP_DIR/src/lib/version.ts" | sed -n '1p'
 }
 
 env_value() {

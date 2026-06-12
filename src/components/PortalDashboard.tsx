@@ -4,6 +4,7 @@ import {
   BookOpenText,
   BrainCircuit,
   FlaskConical,
+  Globe2,
   LayoutDashboard,
   Microscope,
   ShieldCheck,
@@ -13,6 +14,13 @@ import type { CurrentWiregeneUser } from "@/lib/auth-session";
 import { AccountManagementPanel } from "./AccountManagementPanel";
 
 const launcherSites = [
+  {
+    label: "Wiregene Homepage Admin",
+    shortLabel: "WWW Admin",
+    href: "https://www.wiregene.com/admin?wiregene_from=portal",
+    detail: "www.wiregene.com 홈페이지 관리자 페이지",
+    icon: Globe2,
+  },
   {
     label: "Research Search",
     shortLabel: "Search",
