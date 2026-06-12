@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-13 07:02:11 +09:00
+Generated: 2026-06-13 07:07:29 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,8 +11,8 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: 1051225 Support existing Vercel Google Drive secrets
-- App version: Ver 1.46
+- Latest known commit: bd11aab Improve portal storage diagnostics
+- App version: Ver 1.47
 
 ## Git Status At Generation
 
@@ -20,10 +20,8 @@ Env-like paths are intentionally omitted from this section.
 
 ```text
 M backup.md
- M package.json
- M src/app/api/admin/accounts/route.ts
  M src/lib/version.ts
-?? scripts/vercel-audit-google-drive-env.ps1
+?? src/app/api/admin/storage-health/
 ```
 
 ## Active Work Summary
@@ -147,4 +145,8 @@ Current production route issue as of 2026-06-12:
   OAuth values, writes them to the `wiregene-portal` Vercel project, then
   redeploys the latest Portal production deployment. This avoids issuing a new
   Google refresh token.
+- Added `GET /api/admin/storage-health`, protected by
+  `PORTAL_STORAGE_HEALTH_SECRET` via `x-wiregene-storage-health-secret`, so
+  production can verify Portal account Google Drive storage without relying on
+  browser Basic Auth state. Without the secret it returns 404.
 <!-- MANUAL-NOTES-END -->
