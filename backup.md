@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-12 21:29:14 +09:00
+Generated: 2026-06-12 21:36:00 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,8 +11,8 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: e224384 Clarify public portal routing failure steps
-- App version: Ver 1.44
+- Latest known commit: 8a95005 Explain Vercel portal storage routing issue
+- App version: Ver 1.45
 
 ## Git Status At Generation
 
