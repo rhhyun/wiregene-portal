@@ -117,4 +117,6 @@ Current production route issue as of 2026-06-12:
   `Server: Vercel` or `X-Vercel-Id`.
 - Synology scheduler command:
   `cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh`
+- Vercel Google Drive setup command after OAuth values are filled:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\vercel-configure-portal-google-drive.ps1 -Redeploy`
 <!-- MANUAL-NOTES-END -->

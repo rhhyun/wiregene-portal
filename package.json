@@ -15,6 +15,7 @@
     "briefing:generate:synology": "npx tsx src/lib/synology-briefing-runner.ts",
     "check:google-drive-config": "tsx scripts/check-google-drive-config.ts",
     "google-drive:oauth": "tsx scripts/google-drive-oauth.ts",
+    "vercel:portal-google-drive": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/vercel-configure-portal-google-drive.ps1",
     "check:zotero-config": "node scripts/check-zotero-config.mjs",
     "zotero:whoami": "node scripts/zotero-whoami.mjs"
   },
