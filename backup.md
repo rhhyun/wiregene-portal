@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-13 07:34:01 +09:00
+Generated: 2026-06-13 07:56:00 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,7 +11,7 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: e0b40a5 Allow portal storage health probe
+- Latest known commit: 6f6cd44 Clarify portal Google Drive storage errors
 - App version: Ver 1.49
 
 ## Git Status At Generation
@@ -20,9 +20,8 @@ Env-like paths are intentionally omitted from this section.
 
 ```text
 M backup.md
- M src/components/AccountManagementPanel.tsx
- M src/lib/operational-error.ts
- M src/lib/version.ts
+ M package.json
+?? scripts/repair-portal-google-drive-oauth.ps1
 ```
 
 ## Active Work Summary
@@ -120,10 +119,14 @@ Current production route issue as of 2026-06-12:
   `Server: Vercel` or `X-Vercel-Id`.
 - Synology scheduler command:
   `cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh`
-- Vercel Google Drive setup command after OAuth values are filled:
-  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\vercel-configure-portal-google-drive.ps1 -Redeploy`
-- If Vercel already has the Google Drive OAuth secrets, use:
-  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\vercel-configure-portal-google-drive.ps1 -UseExistingVercelGoogleDriveSecrets -Redeploy`
+- Vercel Portal Google Drive OAuth repair command after exact Google Cloud
+  OAuth values are known:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\repair-portal-google-drive-oauth.ps1`
+- The repair script prompts for `GOOGLE_DRIVE_CLIENT_ID`,
+  `GOOGLE_DRIVE_CLIENT_SECRET`, and `GOOGLE_DRIVE_REFRESH_TOKEN`, validates
+  them against Google's token endpoint before changing Vercel, writes only the
+  Portal project's Vercel env vars, redeploys production, and calls the storage
+  health endpoint. It does not print secret values.
 - 2026-06-12: Vercel metadata showed existing `GOOGLE_DRIVE_CLIENT_ID`,
   `GOOGLE_DRIVE_CLIENT_SECRET`, and `GOOGLE_DRIVE_REFRESH_TOKEN` on
   `wiregene-portal`. Added `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive` and
@@ -175,4 +178,9 @@ Current production route issue as of 2026-06-12:
   errors to distinguish `SERVERLESS_LOCAL_STORAGE`, Google OAuth
   `invalid_client`, and Google OAuth `invalid_grant`; bumped app version to
   Ver 1.49.
+- 2026-06-13: Added `scripts/repair-portal-google-drive-oauth.ps1` and
+  `npm run vercel:repair-portal-google-drive`. Use this instead of copying
+  Search/Meta secrets. It validates the OAuth 3-value set first, then updates
+  only Portal Vercel env vars, redeploys, and health-checks
+  `portal-accounts.json`.
 <!-- MANUAL-NOTES-END -->

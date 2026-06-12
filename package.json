@@ -17,6 +17,7 @@
     "google-drive:oauth": "tsx scripts/google-drive-oauth.ts",
     "vercel:audit-google-drive-env": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/vercel-audit-google-drive-env.ps1",
     "vercel:portal-google-drive": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/vercel-configure-portal-google-drive.ps1",
+    "vercel:repair-portal-google-drive": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/repair-portal-google-drive-oauth.ps1",
     "check:zotero-config": "node scripts/check-zotero-config.mjs",
     "zotero:whoami": "node scripts/zotero-whoami.mjs"
   },
