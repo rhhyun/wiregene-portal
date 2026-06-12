@@ -5,6 +5,7 @@ param(
   [string]$Project = "wiregene-portal",
   [ValidateSet("production", "preview", "development")]
   [string]$Environment = "production",
+  [switch]$UseExistingVercelGoogleDriveSecrets,
   [switch]$Redeploy
 )
 
@@ -83,22 +84,24 @@ if ($LASTEXITCODE -ne 0) {
 $sourceEnv = Read-DotEnvFile $SourceEnvPath
 $portalEnv = Read-DotEnvFile $PortalEnvPath
 
-$clientId = Get-RequiredValue $sourceEnv "GOOGLE_DRIVE_CLIENT_ID"
-$clientSecret = Get-RequiredValue $sourceEnv "GOOGLE_DRIVE_CLIENT_SECRET"
-$refreshToken = Get-RequiredValue $sourceEnv "GOOGLE_DRIVE_REFRESH_TOKEN"
-
 $envValues = [ordered]@{
   APP_BASE_URL = "https://portal.wiregene.com"
   WIREGENE_APP_MODE = "portal"
   PORTAL_ACCOUNT_STORAGE_BACKEND = "google-drive"
   PORTAL_ACCOUNT_STORAGE_PATH = ".data/portal/portal-accounts.json"
   PORTAL_ACCOUNT_STORAGE_PATH_DRIVE_FILENAME = "portal-accounts.json"
-  GOOGLE_DRIVE_CLIENT_ID = $clientId
-  GOOGLE_DRIVE_CLIENT_SECRET = $clientSecret
-  GOOGLE_DRIVE_REFRESH_TOKEN = $refreshToken
-  GOOGLE_DRIVE_FOLDER_ID = $sourceEnv["GOOGLE_DRIVE_FOLDER_ID"]
-  GOOGLE_DRIVE_FOLDER_URL = $sourceEnv["GOOGLE_DRIVE_FOLDER_URL"]
-  GOOGLE_DRIVE_FOLDER_NAME = if ($sourceEnv["GOOGLE_DRIVE_FOLDER_NAME"]) { $sourceEnv["GOOGLE_DRIVE_FOLDER_NAME"] } else { "Research Briefing Platform" }
+}
+
+if ($UseExistingVercelGoogleDriveSecrets) {
+  Write-Host "Using existing Vercel Google Drive OAuth environment variables."
+}
+else {
+  $envValues["GOOGLE_DRIVE_CLIENT_ID"] = Get-RequiredValue $sourceEnv "GOOGLE_DRIVE_CLIENT_ID"
+  $envValues["GOOGLE_DRIVE_CLIENT_SECRET"] = Get-RequiredValue $sourceEnv "GOOGLE_DRIVE_CLIENT_SECRET"
+  $envValues["GOOGLE_DRIVE_REFRESH_TOKEN"] = Get-RequiredValue $sourceEnv "GOOGLE_DRIVE_REFRESH_TOKEN"
+  $envValues["GOOGLE_DRIVE_FOLDER_ID"] = $sourceEnv["GOOGLE_DRIVE_FOLDER_ID"]
+  $envValues["GOOGLE_DRIVE_FOLDER_URL"] = $sourceEnv["GOOGLE_DRIVE_FOLDER_URL"]
+  $envValues["GOOGLE_DRIVE_FOLDER_NAME"] = if ($sourceEnv["GOOGLE_DRIVE_FOLDER_NAME"]) { $sourceEnv["GOOGLE_DRIVE_FOLDER_NAME"] } else { "Research Briefing Platform" }
 }
 
 foreach ($key in @(

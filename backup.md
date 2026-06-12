@@ -119,4 +119,11 @@ Current production route issue as of 2026-06-12:
   `cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh`
 - Vercel Google Drive setup command after OAuth values are filled:
   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\vercel-configure-portal-google-drive.ps1 -Redeploy`
+- If Vercel already has the Google Drive OAuth secrets, use:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\vercel-configure-portal-google-drive.ps1 -UseExistingVercelGoogleDriveSecrets -Redeploy`
+- 2026-06-12: Vercel metadata showed existing `GOOGLE_DRIVE_CLIENT_ID`,
+  `GOOGLE_DRIVE_CLIENT_SECRET`, and `GOOGLE_DRIVE_REFRESH_TOKEN` on
+  `wiregene-portal`. Added `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive` and
+  `PORTAL_ACCOUNT_STORAGE_PATH_DRIVE_FILENAME=portal-accounts.json`, then
+  redeployed production and aliased `portal.wiregene.com`.
 <!-- MANUAL-NOTES-END -->
