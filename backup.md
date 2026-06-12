@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-12 21:17:16 +09:00
+Generated: 2026-06-12 21:29:14 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,16 +11,15 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: 6169755 Detect public portal Vercel routing on Synology
-- App version: Ver 1.43
+- Latest known commit: e224384 Clarify public portal routing failure steps
+- App version: Ver 1.44
 
 ## Git Status At Generation
 
 Env-like paths are intentionally omitted from this section.
 
 ```text
-M scripts/synology-write-backup-md.sh
- M scripts/write-backup-md.ps1
+(clean or unavailable)
 ```
 
 ## Active Work Summary
