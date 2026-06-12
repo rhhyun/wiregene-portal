@@ -98,6 +98,38 @@ verify_page_version() {
   log "Rendered version confirmed: $rendered_version"
 }
 
+check_public_portal_route() {
+  skip_public_check="$(env_value SKIP_PUBLIC_PORTAL_ROUTE_CHECK || true)"
+  if [ "${SKIP_PUBLIC_PORTAL_ROUTE_CHECK:-}" = "1" ] || [ "$skip_public_check" = "1" ]; then
+    log "Skipping public portal route check because SKIP_PUBLIC_PORTAL_ROUTE_CHECK=1."
+    return 0
+  fi
+
+  public_host="$(env_value PUBLIC_PORTAL_HOST || true)"
+  [ -n "$public_host" ] || public_host="${PUBLIC_PORTAL_HOST:-portal.wiregene.com}"
+  if [ -z "$public_host" ]; then
+    log "Skipping public portal route check because PUBLIC_PORTAL_HOST is empty."
+    return 0
+  fi
+
+  log "Checking public portal route at https://$public_host."
+  public_headers="$(curl -k -sSI --max-time 15 "https://$public_host/" 2>&1 || true)"
+  if [ -z "$public_headers" ]; then
+    log "WARNING: Could not read public portal headers for https://$public_host."
+    return 0
+  fi
+
+  printf "%s\n" "$public_headers" | sed -n '1,20p' | while IFS= read -r line; do
+    log "PUBLIC: $line"
+  done
+
+  if printf "%s\n" "$public_headers" | grep -Eiq '^(server:[[:space:]]*Vercel|x-vercel-)'; then
+    fail "Public portal host https://$public_host is still served by Vercel. Browser account writes will keep failing with /var/task local storage until Cloudflare DNS/reverse proxy sends this host to Synology. After Synology routing is ready, remove the Vercel alias for $public_host."
+  fi
+
+  log "Public portal route is not reporting Vercel headers."
+}
+
 main() {
   mkdir -p "$LOG_DIR"
   log "Wiregene Portal full update requested."
@@ -122,6 +154,7 @@ main() {
 
   wait_for_local_http
   verify_page_version "$expected_version"
+  check_public_portal_route
 
   log_recent_container_output
   log "Wiregene Portal update completed successfully."

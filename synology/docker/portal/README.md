@@ -24,7 +24,13 @@ cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh 
 The update script pulls the latest source, builds before restarting the service,
 recreates the container only after a successful build, checks local HTTP
 readiness, verifies the rendered `Ver x.y` label when Basic Auth credentials are
-available, and writes a timestamped log under `/volume1/docker/portal/logs`.
+available, checks that the public `portal.wiregene.com` route is not still served
+by Vercel, and writes a timestamped log under `/volume1/docker/portal/logs`.
+
+If the public route check reports Vercel headers, the local Synology container
+was updated correctly but browsers are still reaching Vercel. Fix Cloudflare DNS
+and the DSM reverse proxy first, then remove the Vercel alias for
+`portal.wiregene.com`.
 
 ## Required Source
 
