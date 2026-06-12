@@ -108,7 +108,7 @@ main() {
   export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-wiregene-portal}"
   validate_compose_config
   log "Starting Wiregene Portal from $RUNTIME_DIR."
-  compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" up -d
+  compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" up -d --force-recreate
   log "Wiregene Portal start requested. Check logs with: docker logs wiregene-portal"
 }
 

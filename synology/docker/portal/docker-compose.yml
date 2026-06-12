@@ -31,8 +31,8 @@ services:
         set -eu;
         node -v;
         npm -v;
-        if [ ! -d node_modules ]; then
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi;
-        fi;
+        export NPM_CONFIG_PRODUCTION=false npm_config_production=false;
+        if [ -f package-lock.json ]; then npm ci --include=dev; else npm install --include=dev; fi;
+        rm -rf .next;
         npm run build;
         npm run start -- --hostname 0.0.0.0 --port 3000
