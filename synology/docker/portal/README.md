@@ -24,13 +24,27 @@ cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh 
 The update script pulls the latest source, builds before restarting the service,
 recreates the container only after a successful build, checks local HTTP
 readiness, verifies the rendered `Ver x.y` label when Basic Auth credentials are
-available, checks that the public `portal.wiregene.com` route is not still served
+available, checks whether the public `portal.wiregene.com` route is still served
 by Vercel, and writes a timestamped log under `/volume1/docker/portal/logs`.
 
 If the public route check reports Vercel headers, the local Synology container
-was updated correctly but browsers are still reaching Vercel. Fix Cloudflare DNS
-and the DSM reverse proxy first, then remove the Vercel alias for
-`portal.wiregene.com`.
+was updated correctly but browsers are still reaching Vercel. This is expected
+when Portal is intentionally served from Vercel with Google Drive account
+storage. In that mode, fix the Portal Vercel Google Drive OAuth values instead
+of changing Synology.
+
+To make the DSM scheduler fail whenever the public host is still Vercel, set:
+
+```text
+PUBLIC_PORTAL_ROUTE_POLICY=synology
+```
+
+To keep Vercel as the public host while Synology is only a local/runtime copy,
+leave the default:
+
+```text
+PUBLIC_PORTAL_ROUTE_POLICY=warn
+```
 
 The required public route is:
 

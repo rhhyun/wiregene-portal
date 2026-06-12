@@ -120,10 +120,13 @@ __STATUS__
 - `portal.wiregene.com` is the Wiregene account and site launcher service.
 - Portal account ID storage is intended to run on Synology with
   `PORTAL_ACCOUNT_STORAGE_BACKEND=local-json`.
-- If `portal.wiregene.com` is served by Vercel, account creation cannot write
-  local JSON and will fail under `/var/task`.
+- If `portal.wiregene.com` is served by Vercel, account storage must use
+  `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive` with a valid Google OAuth
+  Client ID/Secret/Refresh Token set on the Vercel project.
 - The Synology update script checks local container readiness, rendered version,
-  and whether the public portal host is still returning Vercel headers.
+  and whether the public portal host is still returning Vercel headers. The
+  public route check warns by default and only fails when
+  `PUBLIC_PORTAL_ROUTE_POLICY=synology`.
 - Synology source checkout: `/volume1/docker/wiregene-portal`.
 - Synology runtime folder: `/volume1/docker/portal`.
 - This backup file can be regenerated at the end of each work session.
@@ -180,8 +183,10 @@ development machine after reviewing it.
 - `npx.cmd tsc --noEmit --pretty false --incremental false`
 - `npm.cmd run build`
 - On Synology, syntax-check shell scripts with `sh -n scripts/<name>.sh`.
-- After deployment, confirm `portal.wiregene.com` does not return
-  `Server: Vercel` or `X-Vercel-Id` headers.
+- If public Portal is intended to run from Synology, confirm
+  `portal.wiregene.com` does not return `Server: Vercel` or `X-Vercel-Id`
+  headers. If public Portal is intentionally Vercel, keep
+  `PUBLIC_PORTAL_ROUTE_POLICY=warn` and verify Google Drive OAuth storage.
 
 ## Manual Handoff Notes
 

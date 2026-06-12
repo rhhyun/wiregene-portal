@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-13 08:00:19 +09:00
+Generated: 2026-06-13 08:16:19 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,7 +11,7 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: aa11c8d Add portal OAuth repair script
+- Latest known commit: 3ada414 Add portal refresh token helper
 - App version: Ver 1.49
 
 ## Git Status At Generation
@@ -19,10 +19,11 @@ values in this file.
 Env-like paths are intentionally omitted from this section.
 
 ```text
-M backup.md
- M package.json
- M scripts/google-drive-oauth.ts
-?? scripts/get-portal-google-drive-refresh-token.ps1
+ M backup.md
+ M scripts/synology-update-portal.sh
+ M scripts/synology-write-backup-md.sh
+ M scripts/write-backup-md.ps1
+ M synology/docker/portal/README.md
 ```
 
 ## Active Work Summary
@@ -30,10 +31,13 @@ M backup.md
 - `portal.wiregene.com` is the Wiregene account and site launcher service.
 - Portal account ID storage is intended to run on Synology with
   `PORTAL_ACCOUNT_STORAGE_BACKEND=local-json`.
-- If `portal.wiregene.com` is served by Vercel, account creation cannot write
-  local JSON and will fail under `/var/task`.
+- If `portal.wiregene.com` is served by Vercel, account storage must use
+  `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive` with a valid Google OAuth
+  Client ID/Secret/Refresh Token set on the Vercel project.
 - The Synology update script checks local container readiness, rendered version,
-  and whether the public portal host is still returning Vercel headers.
+  and whether the public portal host is still returning Vercel headers. The
+  public route check warns by default and only fails when
+  `PUBLIC_PORTAL_ROUTE_POLICY=synology`.
 - Synology source checkout: `/volume1/docker/wiregene-portal`.
 - Synology runtime folder: `/volume1/docker/portal`.
 - This backup file can be regenerated at the end of each work session.
@@ -90,8 +94,10 @@ development machine after reviewing it.
 - `npx.cmd tsc --noEmit --pretty false --incremental false`
 - `npm.cmd run build`
 - On Synology, syntax-check shell scripts with `sh -n scripts/<name>.sh`.
-- After deployment, confirm `portal.wiregene.com` does not return
-  `Server: Vercel` or `X-Vercel-Id` headers.
+- If public Portal is intended to run from Synology, confirm
+  `portal.wiregene.com` does not return `Server: Vercel` or `X-Vercel-Id`
+  headers. If public Portal is intentionally Vercel, keep
+  `PUBLIC_PORTAL_ROUTE_POLICY=warn` and verify Google Drive OAuth storage.
 
 ## Manual Handoff Notes
 
@@ -100,9 +106,11 @@ Current production route issue as of 2026-06-12:
 
 - `portal.wiregene.com` resolves to `76.76.21.21`, and HTTP headers show
   `Server: Vercel` plus `X-Vercel-Id`.
-- Browser account creation is therefore hitting Vercel, not Synology. That is
-  why local JSON writes fail under `/var/task` even after the Synology Docker
-  container is updated.
+- Browser account creation is therefore hitting Vercel, not Synology. If Vercel
+  is the intended public host, Portal account storage must be Google Drive with
+  valid OAuth values on the Vercel project. If Synology is the intended public
+  host, move DNS/reverse proxy to Synology before expecting browser writes to use
+  Synology local JSON.
 - Do not remove the Vercel alias before Synology routing is ready, or the public
   domain may break instead of moving to the NAS.
 - Required external fixes:
@@ -120,6 +128,10 @@ Current production route issue as of 2026-06-12:
   `Server: Vercel` or `X-Vercel-Id`.
 - Synology scheduler command:
   `cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh`
+- Synology public route policy:
+  `PUBLIC_PORTAL_ROUTE_POLICY=warn` lets Synology updates finish when the
+  public host is intentionally still Vercel; `PUBLIC_PORTAL_ROUTE_POLICY=synology`
+  makes the scheduler fail if Vercel headers remain.
 - Vercel Portal Google Drive OAuth repair command after exact Google Cloud
   OAuth values are known:
   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\repair-portal-google-drive-oauth.ps1`
@@ -196,4 +208,8 @@ Current production route issue as of 2026-06-12:
   `npm run google-drive:oauth:portal` so a Portal refresh token can be issued
   with Drive-only scope from the new Client ID/Secret before running the repair
   script.
+- 2026-06-13: Updated the Synology public route check. It no longer says browser
+  writes will always fail with `/var/task`; it now explains Vercel public
+  routing vs Synology public routing and only fails on Vercel headers when
+  `PUBLIC_PORTAL_ROUTE_POLICY=synology`.
 <!-- MANUAL-NOTES-END -->

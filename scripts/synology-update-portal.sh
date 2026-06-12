@@ -105,6 +105,9 @@ check_public_portal_route() {
     return 0
   fi
 
+  public_route_policy="$(env_value PUBLIC_PORTAL_ROUTE_POLICY || true)"
+  [ -n "$public_route_policy" ] || public_route_policy="${PUBLIC_PORTAL_ROUTE_POLICY:-warn}"
+
   public_host="$(env_value PUBLIC_PORTAL_HOST || true)"
   [ -n "$public_host" ] || public_host="${PUBLIC_PORTAL_HOST:-portal.wiregene.com}"
   if [ -z "$public_host" ]; then
@@ -124,13 +127,22 @@ check_public_portal_route() {
   done
 
   if printf "%s\n" "$public_headers" | grep -Eiq '^(server:[[:space:]]*Vercel|x-vercel-)'; then
-    log "Public route fix required:"
+    log "Public portal host https://$public_host is currently served by Vercel."
+    log "If Portal is intentionally running on Vercel, this is expected; account storage must then use a valid Google Drive OAuth configuration on the Vercel project."
+    log "If Portal is intended to run publicly from Synology, apply this route fix:"
     log "1. DSM Control Panel > Login Portal > Advanced > Reverse Proxy: source HTTPS $public_host:443 -> destination HTTP 127.0.0.1:3002."
     log "2. Router/firewall: forward external TCP 443 to the Synology NAS if the NAS is the public HTTPS endpoint."
     log "3. Cloudflare DNS: point $public_host to the Synology public endpoint, not Vercel 76.76.21.21."
     log "4. Only after the public header no longer contains Server: Vercel or X-Vercel-Id, remove the Vercel alias/domain binding for $public_host."
     log "5. Verify from a PC with: curl.exe -I https://$public_host/ ; the response must not contain Server: Vercel or X-Vercel-Id."
-    fail "Public portal host https://$public_host is still served by Vercel. Synology local app is healthy, but browser account writes will keep failing with /var/task local storage until the public route is moved to Synology."
+    log "Set PUBLIC_PORTAL_ROUTE_POLICY=synology in $RUNTIME_DIR/.env if this scheduler should fail whenever the public host is still Vercel."
+
+    if [ "$public_route_policy" = "synology" ]; then
+      fail "Public portal host https://$public_host is still served by Vercel, but PUBLIC_PORTAL_ROUTE_POLICY=synology requires public Synology routing."
+    fi
+
+    log "Continuing because PUBLIC_PORTAL_ROUTE_POLICY=$public_route_policy. Synology local app is healthy; public browser traffic still goes to Vercel."
+    return 0
   fi
 
   log "Public portal route is not reporting Vercel headers."
