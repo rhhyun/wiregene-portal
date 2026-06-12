@@ -587,6 +587,16 @@ async function readAccountApiPayload(response: Response): Promise<AccountApiPayl
 
 function formatApiError(message: string, details?: ApiErrorDetails) {
   if (!details) return message;
+  if (details.code === "SERVERLESS_LOCAL_STORAGE" && details.runtime === "vercel") {
+    return [
+      "현재 portal.wiregene.com은 Synology가 아니라 Vercel에서 실행 중입니다.",
+      "Vercel 서버는 local-json 계정 저장소에 쓸 수 없어 ID 생성이 불가능합니다.",
+      "Cloudflare DNS와 DSM Reverse Proxy를 Synology로 돌리거나, Vercel에서 PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive와 Google Drive OAuth 환경변수를 설정해야 합니다.",
+      details.path ? `path=${details.path}` : undefined,
+      details.backend ? `backend=${details.backend}` : undefined,
+      details.runtime ? `runtime=${details.runtime}` : undefined,
+    ].filter(Boolean).join(" / ");
+  }
 
   const parts = [
     message,
