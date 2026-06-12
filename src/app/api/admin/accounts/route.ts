@@ -6,6 +6,7 @@ import {
   getBasicAuthCredentialsFromEnv,
   parseBasicAuthCredential,
 } from "@/lib/basic-auth-users";
+import { grantStorageErrorDetails } from "@/lib/grant-storage";
 import {
   createPortalAccount,
   listPortalAccountSummaries,
@@ -24,7 +25,15 @@ export async function GET(request: Request) {
 
   const mode = getWiregeneAppMode(request.headers.get("host"));
   const environmentAccounts = getBasicAuthAccountSummaries();
-  const portalAccounts = await listPortalAccountSummaries();
+  let portalAccounts: Awaited<ReturnType<typeof listPortalAccountSummaries>> = [];
+  let portalAccountStorageError: ReturnType<typeof grantStorageErrorDetails> | undefined;
+
+  try {
+    portalAccounts = await listPortalAccountSummaries();
+  } catch (error) {
+    portalAccountStorageError = grantStorageErrorDetails(error);
+  }
+
   const accounts = [...environmentAccounts, ...portalAccounts];
 
   return NextResponse.json(
@@ -34,7 +43,8 @@ export async function GET(request: Request) {
       sites: portalSites,
       siteAccountLists: buildSiteAccountLists(accounts),
       managedBy: mode === "portal" ? "Portal account storage + Vercel Basic Auth" : "Vercel Environment Variables",
-      writable: mode === "portal",
+      writable: mode === "portal" && !portalAccountStorageError,
+      portalAccountStorageError,
     },
     {
       headers: {
@@ -135,7 +145,7 @@ async function isAuthenticatedAdminRequest(request: Request) {
     username: providedCredential.username,
     password: providedCredential.password,
     site: "portal",
-  });
+  }).catch(() => null);
 
   return portalAccount?.role === "admin";
 }
@@ -173,6 +183,7 @@ function accountErrorResponse(error: unknown) {
   return NextResponse.json(
     {
       error: error instanceof Error ? error.message : "Account operation failed.",
+      details: grantStorageErrorDetails(error),
     },
     { status: 400 },
   );

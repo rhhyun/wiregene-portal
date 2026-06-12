@@ -52,8 +52,33 @@ type AccountState = {
   sites: PortalSite[];
   siteAccountLists: SiteAccountList[];
   message?: string;
+  warning?: string;
   managedBy?: string;
   writable?: boolean;
+};
+
+type ApiErrorDetails = {
+  label?: string;
+  operation?: string;
+  path?: string;
+  backend?: string;
+  code?: string;
+  message?: string;
+  cause?: string;
+  backupPath?: string;
+};
+
+type AccountApiPayload = {
+  accounts?: AccountSummary[];
+  sites?: PortalSite[];
+  siteAccountLists?: SiteAccountList[];
+  managedBy?: string;
+  writable?: boolean;
+  account?: AccountSummary;
+  temporaryPassword?: string;
+  error?: string;
+  details?: ApiErrorDetails;
+  portalAccountStorageError?: ApiErrorDetails;
 };
 
 type TemporaryPasswordState = {
@@ -86,7 +111,7 @@ export function AccountManagementPanel() {
   const environmentAccounts = state.accounts.length - managedAccounts.length;
 
   async function reloadAccounts() {
-    setState((current) => ({ ...current, status: "loading", message: undefined }));
+    setState((current) => ({ ...current, status: "loading", message: undefined, warning: undefined }));
     setState(await getAccountState());
   }
 
@@ -101,14 +126,10 @@ export function AccountManagementPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email, role, sites: selectedSites }),
       });
-      const payload = (await response.json()) as {
-        account?: AccountSummary;
-        temporaryPassword?: string;
-        error?: string;
-      };
+      const payload = await readAccountApiPayload(response);
 
       if (!response.ok || !payload.account || !payload.temporaryPassword) {
-        throw new Error(payload.error || `HTTP ${response.status}`);
+        throw new Error(formatApiError(payload.error || `HTTP ${response.status}`, payload.details));
       }
 
       setUsername("");
@@ -141,14 +162,10 @@ export function AccountManagementPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ accountId: account.id, action: "reset-password" }),
       });
-      const payload = (await response.json()) as {
-        account?: AccountSummary;
-        temporaryPassword?: string;
-        error?: string;
-      };
+      const payload = await readAccountApiPayload(response);
 
       if (!response.ok || !payload.account || !payload.temporaryPassword) {
-        throw new Error(payload.error || `HTTP ${response.status}`);
+        throw new Error(formatApiError(payload.error || `HTTP ${response.status}`, payload.details));
       }
 
       setTemporaryPassword({
@@ -244,9 +261,15 @@ export function AccountManagementPanel() {
         </section>
       ) : null}
 
-      {state.status === "error" ? (
+      {state.message ? (
         <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900">
           {state.message}
+        </p>
+      ) : null}
+
+      {state.warning ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+          {state.warning}
         </p>
       ) : null}
 
@@ -441,24 +464,26 @@ function SubsiteIdListSection({
 async function getAccountState(): Promise<AccountState> {
   try {
     const response = await fetch("/api/admin/accounts", { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = (await response.json()) as {
-      accounts?: AccountSummary[];
-      sites?: PortalSite[];
-      siteAccountLists?: SiteAccountList[];
-      managedBy?: string;
-      writable?: boolean;
-    };
+    const payload = await readAccountApiPayload(response);
+
+    if (!response.ok) {
+      throw new Error(formatApiError(payload.error || `HTTP ${response.status}`, payload.details));
+    }
+
     const accounts = payload.accounts ?? [];
     const sites = payload.sites ?? [];
+    const warning = payload.portalAccountStorageError
+      ? formatApiError("Portal 계정 저장소를 읽지 못했습니다.", payload.portalAccountStorageError)
+      : undefined;
 
     return {
-      status: "ready",
+      status: warning ? "error" : "ready",
       accounts,
       sites,
       siteAccountLists: payload.siteAccountLists ?? buildSiteAccountLists(sites, accounts),
       managedBy: payload.managedBy ?? "Vercel Environment Variables",
       writable: Boolean(payload.writable),
+      warning,
     };
   } catch (error) {
     return {
@@ -553,4 +578,25 @@ function roleLabel(role: AccountSummary["role"]) {
 
 function formatDomain(url: string) {
   return url.replace(/^https?:\/\//, "");
+}
+
+async function readAccountApiPayload(response: Response): Promise<AccountApiPayload> {
+  return (await response.json().catch(() => ({ error: `HTTP ${response.status}` }))) as AccountApiPayload;
+}
+
+function formatApiError(message: string, details?: ApiErrorDetails) {
+  if (!details) return message;
+
+  const parts = [
+    message,
+    details.message,
+    details.code ? `code=${details.code}` : undefined,
+    details.path ? `path=${details.path}` : undefined,
+    details.operation ? `operation=${details.operation}` : undefined,
+    details.backend ? `backend=${details.backend}` : undefined,
+    details.cause ? `cause=${details.cause}` : undefined,
+    details.backupPath ? `backup=${details.backupPath}` : undefined,
+  ].filter(Boolean);
+
+  return Array.from(new Set(parts)).join(" / ");
 }
