@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-13 07:56:00 +09:00
+Generated: 2026-06-13 08:00:19 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,7 +11,7 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: 6f6cd44 Clarify portal Google Drive storage errors
+- Latest known commit: aa11c8d Add portal OAuth repair script
 - App version: Ver 1.49
 
 ## Git Status At Generation
@@ -21,7 +21,8 @@ Env-like paths are intentionally omitted from this section.
 ```text
 M backup.md
  M package.json
-?? scripts/repair-portal-google-drive-oauth.ps1
+ M scripts/google-drive-oauth.ts
+?? scripts/get-portal-google-drive-refresh-token.ps1
 ```
 
 ## Active Work Summary
@@ -122,6 +123,14 @@ Current production route issue as of 2026-06-12:
 - Vercel Portal Google Drive OAuth repair command after exact Google Cloud
   OAuth values are known:
   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\repair-portal-google-drive-oauth.ps1`
+- Portal refresh token generation command after a new Google OAuth Client ID
+  and Client Secret are created:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\get-portal-google-drive-refresh-token.ps1`
+- The token generation wrapper requests only
+  `https://www.googleapis.com/auth/drive.file` for Portal account storage,
+  prompts for the Client ID/Secret without writing them to disk, prints the
+  Google approval URL, and then prints the verified refresh token in the local
+  terminal after approval.
 - The repair script prompts for `GOOGLE_DRIVE_CLIENT_ID`,
   `GOOGLE_DRIVE_CLIENT_SECRET`, and `GOOGLE_DRIVE_REFRESH_TOKEN`, validates
   them against Google's token endpoint before changing Vercel, writes only the
@@ -183,4 +192,8 @@ Current production route issue as of 2026-06-12:
   Search/Meta secrets. It validates the OAuth 3-value set first, then updates
   only Portal Vercel env vars, redeploys, and health-checks
   `portal-accounts.json`.
+- 2026-06-13: Added `scripts/get-portal-google-drive-refresh-token.ps1` and
+  `npm run google-drive:oauth:portal` so a Portal refresh token can be issued
+  with Drive-only scope from the new Client ID/Secret before running the repair
+  script.
 <!-- MANUAL-NOTES-END -->

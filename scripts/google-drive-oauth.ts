@@ -2,10 +2,13 @@ import http from "http";
 import { AddressInfo } from "net";
 import { refreshGoogleDriveOauthAccessToken } from "../src/lib/google-drive-oauth";
 
-const googleOauthScopes = [
+const defaultGoogleOauthScopes = [
   "https://www.googleapis.com/auth/drive.file",
   "https://www.googleapis.com/auth/gmail.send",
-].join(" ");
+];
+const googleOauthScopes = (
+  process.env.GOOGLE_DRIVE_OAUTH_SCOPES?.trim() || defaultGoogleOauthScopes.join(" ")
+);
 const authUrl = "https://accounts.google.com/o/oauth2/v2/auth";
 const tokenUrl = "https://oauth2.googleapis.com/token";
 
