@@ -27,6 +27,28 @@ compose() {
   fi
 }
 
+log_docker_versions() {
+  docker --version 2>/dev/null | while IFS= read -r line; do
+    log "$line"
+  done
+
+  if docker compose version >/dev/null 2>&1; then
+    docker compose version 2>/dev/null | while IFS= read -r line; do
+      log "$line"
+    done
+  elif command -v docker-compose >/dev/null 2>&1; then
+    docker-compose --version 2>/dev/null | while IFS= read -r line; do
+      log "$line"
+    done
+  fi
+}
+
+validate_compose_config() {
+  if ! compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" config >/dev/null; then
+    fail "Docker Compose could not read $RUNTIME_DIR/docker-compose.yml. The runtime copy has been refreshed from $PACKAGE_DIR; check the Compose error above."
+  fi
+}
+
 prepare_runtime() {
   [ -f "$APP_DIR/package.json" ] || fail "Shared app checkout was not found at APP_DIR=$APP_DIR"
   [ -d "$PACKAGE_DIR" ] || fail "Synology package directory was not found: $PACKAGE_DIR"
@@ -82,6 +104,9 @@ main() {
   log "Wiregene Portal DSM scheduler start requested."
   prepare_runtime
   warn_runtime_env
+  log_docker_versions
+  export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-wiregene-portal}"
+  validate_compose_config
   log "Starting Wiregene Portal from $RUNTIME_DIR."
   compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" up -d
   log "Wiregene Portal start requested. Check logs with: docker logs wiregene-portal"
