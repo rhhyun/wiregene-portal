@@ -84,6 +84,10 @@ const portalAccountStorage = createGrantJsonStorage<PortalAccountData>({
   envName: "PORTAL_ACCOUNT_STORAGE_PATH",
   defaultRelativePath: ".data/portal-accounts.json",
   label: "portal account",
+  backendEnvNames: ["PORTAL_ACCOUNT_STORAGE_BACKEND"],
+  defaultBackend: "local-json",
+  localReadOnlyMessage:
+    "Portal account local storage cannot write under /var/task. Set PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive for Vercel, or run Portal on Synology with local-json storage.",
   emptyData: () => ({ accounts: [] }),
   normalize: normalizePortalAccountData,
 });

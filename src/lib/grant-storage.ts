@@ -11,6 +11,9 @@ type GrantJsonStorageOptions<T> = {
   envName: string;
   defaultRelativePath: string;
   label: string;
+  backendEnvNames?: readonly string[];
+  defaultBackend?: string;
+  localReadOnlyMessage?: string;
   emptyData: () => T;
   normalize: (value: unknown) => T;
 };
@@ -44,12 +47,21 @@ export function resolveGrantStoragePath(envName: string, defaultRelativePath: st
   );
 }
 
-function grantStorageBackend() {
-  return (process.env.GRANT_STORAGE_BACKEND ?? process.env.REPORT_STORAGE_BACKEND ?? "local-json").toLowerCase();
+const defaultGrantStorageBackendEnvNames = ["GRANT_STORAGE_BACKEND", "REPORT_STORAGE_BACKEND"] as const;
+
+function grantStorageBackend(options: Pick<GrantJsonStorageOptions<unknown>, "backendEnvNames" | "defaultBackend"> = {}) {
+  const backendEnvNames = options.backendEnvNames ?? defaultGrantStorageBackendEnvNames;
+
+  for (const envName of backendEnvNames) {
+    const backend = process.env[envName]?.trim();
+    if (backend) return backend.toLowerCase();
+  }
+
+  return (options.defaultBackend ?? "local-json").toLowerCase();
 }
 
-function isGoogleDriveGrantStorage() {
-  return grantStorageBackend() === "google-drive";
+function isGoogleDriveGrantStorage(options: GrantJsonStorageOptions<unknown>) {
+  return grantStorageBackend(options) === "google-drive";
 }
 
 function grantDriveFileName(envName: string, defaultRelativePath: string) {
@@ -87,7 +99,7 @@ export function createGrantJsonStorage<T>(options: GrantJsonStorageOptions<T>) {
   return {
     path: filePath,
     async read() {
-      if (isGoogleDriveGrantStorage()) {
+      if (isGoogleDriveGrantStorage(options)) {
         const raw = await readGoogleDriveData(options.label, driveFileName(), driveFileId());
         if (!raw) return options.emptyData();
         return parseStoredJson(raw, options, async (error) => {
@@ -102,13 +114,13 @@ export function createGrantJsonStorage<T>(options: GrantJsonStorageOptions<T>) {
         raw = await fs.readFile(targetPath, "utf8");
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") return options.emptyData();
-        throw storageError(error, options.label, "read", targetPath);
+        throw storageError(error, options.label, "read", targetPath, {}, options);
       }
 
-      return parseStoredJson(raw, options, (error) => moveCorruptJsonAside(options.label, targetPath, error));
+      return parseStoredJson(raw, options, (error) => moveCorruptJsonAside(options.label, targetPath, error, options));
     },
     async write(data: T) {
-      if (isGoogleDriveGrantStorage()) {
+      if (isGoogleDriveGrantStorage(options)) {
         await writeGoogleDriveData(options.label, driveFileName(), JSON.stringify(data, null, 2), driveFileId());
         return;
       }
@@ -121,9 +133,9 @@ export function createGrantJsonStorage<T>(options: GrantJsonStorageOptions<T>) {
           label: options.label,
           operation: "write",
           path: targetPath,
-          backend: grantStorageBackend(),
+          backend: grantStorageBackend(options),
           code: "SERVERLESS_LOCAL_STORAGE",
-          message:
+          message: options.localReadOnlyMessage ??
             "Local JSON grant storage cannot write under /var/task. Set REPORT_STORAGE_BACKEND=google-drive or GRANT_STORAGE_BACKEND=google-drive in Vercel.",
         });
       }
@@ -134,7 +146,7 @@ export function createGrantJsonStorage<T>(options: GrantJsonStorageOptions<T>) {
         await fs.rename(temporaryPath, targetPath);
       } catch (error) {
         await fs.unlink(temporaryPath).catch(() => undefined);
-        throw storageError(error, options.label, "write", targetPath);
+        throw storageError(error, options.label, "write", targetPath, {}, options);
       }
     },
   };
@@ -149,7 +161,7 @@ async function parseStoredJson<T>(
     return options.normalize(JSON.parse(raw));
   } catch (error) {
     if (!(error instanceof SyntaxError)) {
-      throw storageError(error, options.label, "normalize", storageLocation(options));
+      throw storageError(error, options.label, "normalize", storageLocation(options), {}, options);
     }
 
     await backupCorrupt(error);
@@ -158,7 +170,7 @@ async function parseStoredJson<T>(
 }
 
 function storageLocation(options: GrantJsonStorageOptions<unknown>) {
-  return isGoogleDriveGrantStorage()
+  return isGoogleDriveGrantStorage(options)
     ? `google-drive:${grantDriveFileName(options.envName, options.defaultRelativePath)}`
     : resolveGrantStoragePath(options.envName, options.defaultRelativePath);
 }
@@ -205,7 +217,12 @@ function ensureGoogleDriveGrantStorageConfigured(label: string, fileName: string
   });
 }
 
-async function moveCorruptJsonAside(label: string, targetPath: string, parseError: SyntaxError) {
+async function moveCorruptJsonAside(
+  label: string,
+  targetPath: string,
+  parseError: SyntaxError,
+  options: GrantJsonStorageOptions<unknown>,
+) {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupPath = `${targetPath}.corrupt-${stamp}`;
 
@@ -215,7 +232,7 @@ async function moveCorruptJsonAside(label: string, targetPath: string, parseErro
     throw storageError(error, label, "backup-corrupt-json", targetPath, {
       cause: parseError.message,
       backupPath,
-    });
+    }, options);
   }
 }
 
@@ -225,6 +242,7 @@ function storageError(
   operation: string,
   targetPath: string,
   extra: Partial<GrantStorageErrorDetails> = {},
+  options?: Pick<GrantJsonStorageOptions<unknown>, "backendEnvNames" | "defaultBackend">,
 ) {
   if (error instanceof GrantStorageError) return error;
   const nodeError = error as NodeJS.ErrnoException;
@@ -234,7 +252,7 @@ function storageError(
     label,
     operation,
     path: targetPath,
-    backend: grantStorageBackend(),
+    backend: grantStorageBackend(options),
     code: nodeError.code,
     message,
     ...extra,

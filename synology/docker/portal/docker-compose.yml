@@ -19,6 +19,7 @@ services:
       PORT: "3000"
       REPORT_STORAGE_BACKEND: ${REPORT_STORAGE_BACKEND:-local-json}
       REPORT_STORAGE_LOCAL_PATH: ${REPORT_STORAGE_LOCAL_PATH:-.data/portal/research-briefing-storage.json}
+      PORTAL_ACCOUNT_STORAGE_BACKEND: ${PORTAL_ACCOUNT_STORAGE_BACKEND:-local-json}
       PORTAL_ACCOUNT_STORAGE_PATH: ${PORTAL_ACCOUNT_STORAGE_PATH:-.data/portal/portal-accounts.json}
     volumes:
       - ${APP_SOURCE_DIR:-/volume1/docker/wiregene-portal}:/app
