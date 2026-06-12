@@ -598,6 +598,31 @@ function formatApiError(message: string, details?: ApiErrorDetails) {
     ].filter(Boolean).join(" / ");
   }
 
+  if (details.message?.includes("Google OAuth refresh failed: invalid_client")) {
+    return [
+      "Portal 계정 저장소가 Google Drive 백엔드까지 도달했지만 Google OAuth Client ID/Secret이 거부되었습니다.",
+      "현재 Vercel에 저장된 GOOGLE_DRIVE_CLIENT_ID 또는 GOOGLE_DRIVE_CLIENT_SECRET 값이 잘못되었거나 서로 맞지 않습니다.",
+      "Vercel/GitHub의 sensitive secrets는 값을 다시 읽을 수 없으므로 Search/Meta 프로젝트에서 자동 복구할 수 없습니다.",
+      "Google Cloud Console의 정확한 OAuth Client ID와 Client Secret, 그 쌍으로 발급한 Refresh Token 3개를 같은 값으로 다시 설정해야 합니다.",
+      details.path ? `path=${details.path}` : undefined,
+      details.operation ? `operation=${details.operation}` : undefined,
+      details.backend ? `backend=${details.backend}` : undefined,
+      details.runtime ? `runtime=${details.runtime}` : undefined,
+    ].filter(Boolean).join(" / ");
+  }
+
+  if (details.message?.includes("Google OAuth refresh failed: invalid_grant")) {
+    return [
+      "Portal 계정 저장소가 Google Drive 백엔드까지 도달했지만 Refresh Token이 거부되었습니다.",
+      "GOOGLE_DRIVE_REFRESH_TOKEN이 만료, 취소, 오복사되었거나 현재 OAuth Client ID/Secret 쌍으로 발급된 토큰이 아닙니다.",
+      "정확한 OAuth Client ID와 Client Secret을 확인한 뒤 같은 쌍으로 Refresh Token을 다시 발급해 Vercel에 반영해야 합니다.",
+      details.path ? `path=${details.path}` : undefined,
+      details.operation ? `operation=${details.operation}` : undefined,
+      details.backend ? `backend=${details.backend}` : undefined,
+      details.runtime ? `runtime=${details.runtime}` : undefined,
+    ].filter(Boolean).join(" / ");
+  }
+
   const parts = [
     message,
     details.message,

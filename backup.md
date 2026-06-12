@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-13 07:11:33 +09:00
+Generated: 2026-06-13 07:34:01 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,8 +11,8 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: e006bc4 Add portal storage health check
-- App version: Ver 1.48
+- Latest known commit: e0b40a5 Allow portal storage health probe
+- App version: Ver 1.49
 
 ## Git Status At Generation
 
@@ -20,8 +20,9 @@ Env-like paths are intentionally omitted from this section.
 
 ```text
 M backup.md
+ M src/components/AccountManagementPanel.tsx
+ M src/lib/operational-error.ts
  M src/lib/version.ts
- M src/proxy.ts
 ```
 
 ## Active Work Summary
@@ -152,4 +153,26 @@ Current production route issue as of 2026-06-12:
 - The Portal proxy must also allow `/api/admin/storage-health` through when
   the same health secret header matches; otherwise Basic Auth blocks the route
   before the health handler can run.
+- 2026-06-13: Production health check on
+  `https://portal.wiregene.com/api/admin/storage-health` reached
+  `backend=google-drive` and failed with
+  `Google OAuth refresh failed: invalid_client`. This is no longer a
+  `local-json`/`/var/task` problem; Google rejected the OAuth Client ID/Secret
+  pair currently stored on Vercel.
+- 2026-06-13: Local scan of Documents/Desktop/Downloads and Google Drive search
+  found no reusable real `GOOGLE_DRIVE_CLIENT_ID`,
+  `GOOGLE_DRIVE_CLIENT_SECRET`, `GOOGLE_DRIVE_REFRESH_TOKEN` set. Results were
+  placeholders, docs, package files, or unrelated service-account/client IDs.
+- 2026-06-13: Vercel API metadata for Portal/Search/Meta production Google
+  Drive env vars shows `type=sensitive`, `decrypted=false`, `valueLength=0`.
+  Vercel will not return these secret values after creation, so they cannot be
+  copied from Search/Meta to Portal. A `decrypt=true` attempt returned 403.
+- 2026-06-13: Search GitHub Actions secrets were already tested by running the
+  existing `research-briefing.yml` config check and failed with
+  `invalid_client`, so Search GitHub Secrets are not a valid source of OAuth
+  values for Portal.
+- 2026-06-13: Updated account-management error text and dashboard operational
+  errors to distinguish `SERVERLESS_LOCAL_STORAGE`, Google OAuth
+  `invalid_client`, and Google OAuth `invalid_grant`; bumped app version to
+  Ver 1.49.
 <!-- MANUAL-NOTES-END -->

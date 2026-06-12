@@ -11,9 +11,9 @@ export function toOperationalError(error: unknown): OperationalError {
     return {
       title: "Google Drive OAuth client 설정 오류",
       message:
-        "Google Drive refresh token 갱신이 거부되었습니다. GOOGLE_DRIVE_CLIENT_ID 또는 GOOGLE_DRIVE_CLIENT_SECRET 값이 올바르지 않거나, refresh token을 발급한 OAuth client와 다른 값입니다.",
+        "Portal 계정 저장소가 Google Drive 백엔드까지 도달했지만 Google OAuth Client ID/Secret이 거부되었습니다. Vercel에 저장된 GOOGLE_DRIVE_CLIENT_ID 또는 GOOGLE_DRIVE_CLIENT_SECRET 값이 잘못되었거나 서로 맞지 않습니다.",
       action:
-        "Google Cloud Console의 OAuth Client ID와 Client Secret을 다시 확인한 뒤, 같은 값으로 npm run google-drive:oauth를 실행해 GOOGLE_DRIVE_REFRESH_TOKEN을 새로 발급하세요. GitHub Secrets와 Vercel Environment Variables도 같은 값으로 맞춰야 합니다.",
+        "Vercel/GitHub sensitive secrets는 값을 다시 읽을 수 없으므로 Search/Meta에서 자동 복구할 수 없습니다. Google Cloud Console의 정확한 OAuth Client ID와 Client Secret, 그 쌍으로 발급한 Refresh Token 3개를 같은 값으로 다시 설정해야 합니다.",
     };
   }
 
@@ -21,9 +21,9 @@ export function toOperationalError(error: unknown): OperationalError {
     return {
       title: "Google Drive refresh token 오류",
       message:
-        "Google Drive refresh token이 만료, 취소, 오복사되었거나 현재 OAuth client와 맞지 않습니다.",
+        "Portal 계정 저장소가 Google Drive 백엔드까지 도달했지만 Refresh Token이 거부되었습니다. GOOGLE_DRIVE_REFRESH_TOKEN이 만료, 취소, 오복사되었거나 현재 OAuth Client ID/Secret 쌍으로 발급된 토큰이 아닙니다.",
       action:
-        "현재 GOOGLE_DRIVE_CLIENT_ID와 GOOGLE_DRIVE_CLIENT_SECRET을 사용해 npm run google-drive:oauth를 다시 실행하고, 새 GOOGLE_DRIVE_REFRESH_TOKEN을 GitHub와 Vercel에 반영하세요.",
+        "정확한 OAuth Client ID와 Client Secret을 확인한 뒤 같은 쌍으로 Refresh Token을 다시 발급해 GitHub와 Vercel에 반영하세요.",
     };
   }
 
