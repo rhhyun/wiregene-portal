@@ -60,14 +60,18 @@ function getEnvironmentUser(
 async function getLocalPortalUser(
   providedCredential: Pick<BasicAuthCredential, "username" | "password">,
 ): Promise<CurrentWiregeneUser | null> {
-  const account = await verifyPortalAccountCredentials({
-    username: providedCredential.username,
-    password: providedCredential.password,
-    site: "portal",
-  });
-  if (!account) return null;
+  try {
+    const account = await verifyPortalAccountCredentials({
+      username: providedCredential.username,
+      password: providedCredential.password,
+      site: "portal",
+    });
+    if (!account) return null;
 
-  return currentUser(account.username, account.role);
+    return currentUser(account.username, account.role);
+  } catch {
+    return null;
+  }
 }
 
 async function getRemotePortalUser(

@@ -49,6 +49,19 @@ validate_compose_config() {
   fi
 }
 
+build_app() {
+  log "Installing dependencies and building Wiregene Portal before service restart."
+  compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" run --rm --no-deps portal sh -lc '
+    set -eu
+    node -v
+    npm -v
+    export NPM_CONFIG_PRODUCTION=false npm_config_production=false
+    if [ -f package-lock.json ]; then npm ci --include=dev; else npm install --include=dev; fi
+    npm run build
+  '
+  log "Wiregene Portal build completed."
+}
+
 prepare_runtime() {
   [ -f "$APP_DIR/package.json" ] || fail "Shared app checkout was not found at APP_DIR=$APP_DIR"
   [ -d "$PACKAGE_DIR" ] || fail "Synology package directory was not found: $PACKAGE_DIR"
@@ -107,6 +120,7 @@ main() {
   log_docker_versions
   export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-wiregene-portal}"
   validate_compose_config
+  build_app
   log "Starting Wiregene Portal from $RUNTIME_DIR."
   compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" up -d --force-recreate
   log "Wiregene Portal start requested. Check logs with: docker logs wiregene-portal"
