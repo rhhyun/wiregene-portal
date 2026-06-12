@@ -1,99 +1,6 @@
-param(
-  [string]$AppDir = (Split-Path -Parent $PSScriptRoot),
-  [string]$BackupPath
-)
-
-$ErrorActionPreference = "Stop"
-
-if (-not $BackupPath) {
-  $BackupPath = Join-Path $AppDir "backup.md"
-}
-
-function Invoke-GitText {
-  param(
-    [Parameter(ValueFromRemainingArguments = $true)]
-    [string[]]$GitArgs
-  )
-
-  try {
-    $output = & git -C $AppDir @GitArgs 2>$null
-    if ($LASTEXITCODE -ne 0) {
-      return ""
-    }
-
-    return ($output -join "`n").Trim()
-  } catch {
-    return ""
-  }
-}
-
-function Read-CurrentVersion {
-  $versionFile = Join-Path $AppDir "src/lib/version.ts"
-  if (-not (Test-Path -LiteralPath $versionFile)) {
-    return "unknown"
-  }
-
-  $text = Get-Content -LiteralPath $versionFile -Raw
-  $match = [regex]::Match($text, 'export\s+const\s+BRIEFING_VERSION\s*=\s*"([^"]+)"')
-  if ($match.Success) {
-    return $match.Groups[1].Value
-  }
-
-  return "unknown"
-}
-
-function Get-FilteredStatus {
-  $status = Invoke-GitText status --short
-  if (-not $status) {
-    return "(clean or unavailable)"
-  }
-
-  $lines = $status -split "`n" | Where-Object {
-    $line = $_.TrimEnd()
-    $line -and ($line -notmatch '\.env')
-  }
-
-  if (-not $lines -or $lines.Count -eq 0) {
-    return "(clean after omitting env-like paths)"
-  }
-
-  return ($lines -join "`n")
-}
-
-function Get-ManualNotes {
-  if (-not (Test-Path -LiteralPath $BackupPath)) {
-    return "Add handoff notes here when a task has context that is not captured by git status."
-  }
-
-  $text = Get-Content -LiteralPath $BackupPath -Raw
-  $match = [regex]::Match(
-    $text,
-    '(?s)<!-- MANUAL-NOTES-START -->\s*(.*?)\s*<!-- MANUAL-NOTES-END -->'
-  )
-
-  if ($match.Success -and $match.Groups[1].Value.Trim()) {
-    return $match.Groups[1].Value.Trim()
-  }
-
-  return "Add handoff notes here when a task has context that is not captured by git status."
-}
-
-$generatedAt = Get-Date -Format "yyyy-MM-dd HH:mm:ss K"
-$version = Read-CurrentVersion
-$branch = Invoke-GitText rev-parse --abbrev-ref HEAD
-$commit = Invoke-GitText log -1 --oneline
-$remote = Invoke-GitText remote get-url origin
-$status = Get-FilteredStatus
-$manualNotes = Get-ManualNotes
-
-if (-not $branch) { $branch = "unknown" }
-if (-not $commit) { $commit = "unknown" }
-if (-not $remote) { $remote = "unknown" }
-
-$template = @'
 # Wiregene Work Backup
 
-Generated: __GENERATED_AT__
+Generated: 2026-06-12 21:17:16 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -102,17 +9,18 @@ values in this file.
 ## Current Repository
 
 - Repository: wiregene-portal
-- Remote: __REMOTE__
-- Branch: __BRANCH__
-- Latest known commit: __COMMIT__
-- App version: Ver __VERSION__
+- Remote: https://github.com/rhhyun/wiregene-portal.git
+- Branch: main
+- Latest known commit: 6169755 Detect public portal Vercel routing on Synology
+- App version: Ver 1.43
 
 ## Git Status At Generation
 
 Env-like paths are intentionally omitted from this section.
 
 ```text
-__STATUS__
+M scripts/synology-write-backup-md.sh
+ M scripts/write-backup-md.ps1
 ```
 
 ## Active Work Summary
@@ -186,19 +94,28 @@ development machine after reviewing it.
 ## Manual Handoff Notes
 
 <!-- MANUAL-NOTES-START -->
-__MANUAL_NOTES__
+Current production route issue as of 2026-06-12:
+
+- `portal.wiregene.com` resolves to `76.76.21.21`, and HTTP headers show
+  `Server: Vercel` plus `X-Vercel-Id`.
+- Browser account creation is therefore hitting Vercel, not Synology. That is
+  why local JSON writes fail under `/var/task` even after the Synology Docker
+  container is updated.
+- Do not remove the Vercel alias before Synology routing is ready, or the public
+  domain may break instead of moving to the NAS.
+- Required external fixes:
+  1. In DSM Reverse Proxy, route source `HTTPS portal.wiregene.com:443` to
+     destination `HTTP 127.0.0.1:3002`.
+  2. Ensure the router/firewall forwards external TCP 443 to the Synology NAS if
+     the NAS is the public endpoint.
+  3. In Cloudflare DNS, point `portal.wiregene.com` to the Synology public
+     endpoint, not Vercel `76.76.21.21`.
+  4. After DNS/reverse proxy works, remove the Vercel alias/domain binding for
+     `portal.wiregene.com` from the Vercel `wiregene-portal` project.
+- Verify with:
+  `Resolve-DnsName portal.wiregene.com` and
+  `curl.exe -I https://portal.wiregene.com/`. The response must not contain
+  `Server: Vercel` or `X-Vercel-Id`.
+- Synology scheduler command:
+  `cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh`
 <!-- MANUAL-NOTES-END -->
-'@
-
-$content = $template.
-  Replace("__GENERATED_AT__", $generatedAt).
-  Replace("__REMOTE__", $remote).
-  Replace("__BRANCH__", $branch).
-  Replace("__COMMIT__", $commit).
-  Replace("__VERSION__", $version).
-  Replace("__STATUS__", $status).
-  Replace("__MANUAL_NOTES__", $manualNotes)
-
-$utf8NoBom = New-Object System.Text.UTF8Encoding $false
-[System.IO.File]::WriteAllText($BackupPath, $content, $utf8NoBom)
-Write-Host "Wrote $BackupPath"

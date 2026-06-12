@@ -55,7 +55,7 @@ values in this file.
 
 ## Current Repository
 
-- Repository: research-briefing-platform
+- Repository: wiregene-portal
 - Remote: $remote
 - Branch: $branch
 - Latest known commit: $commit
@@ -71,24 +71,21 @@ $status
 
 ## Active Work Summary
 
-- \`search.wiregene.com\` remains the research briefing/search service.
-- \`meta.wiregene.com\` is separated for meta-analysis workflows.
-- \`portal.wiregene.com\` is separated for account and site management.
-- Synology source checkouts are separated:
-  \`/volume1/docker/research-briefing-platform\`,
-  \`/volume1/docker/wiregene-meta-analysis\`, and
-  \`/volume1/docker/wiregene-portal\`.
-- Synology runtime folders remain \`/volume1/docker/meta\` and
-  \`/volume1/docker/portal\`.
-- Existing login credentials should be migrated with
-  \`scripts/synology-migrate-auth-env.sh\`; they should not be printed or
-  manually retyped into shared notes.
+- \`portal.wiregene.com\` is the Wiregene account and site launcher service.
+- Portal account ID storage is intended to run on Synology with
+  \`PORTAL_ACCOUNT_STORAGE_BACKEND=local-json\`.
+- If \`portal.wiregene.com\` is served by Vercel, account creation cannot write
+  local JSON and will fail under \`/var/task\`.
+- The Synology update script checks local container readiness, rendered version,
+  and whether the public portal host is still returning Vercel headers.
+- Synology source checkout: \`/volume1/docker/wiregene-portal\`.
+- Synology runtime folder: \`/volume1/docker/portal\`.
 - This backup file can be regenerated at the end of each work session.
 
 ## Continue On Another PC
 
 \`\`\`powershell
-cd C:\\Users\\rhhyu\\Documents\\GitHub\\research-briefing-platform
+cd C:\\Users\\rhhyu\\Documents\\Portal.wiregene.com
 git pull --ff-only origin main
 npm.cmd install
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\write-backup-md.ps1
@@ -100,8 +97,8 @@ from the latest commit.
 ## Synology Commands
 
 \`\`\`sh
-APP_DIR=/volume1/docker/research-briefing-platform
-REPO_URL=https://github.com/rhhyun/research-briefing-platform.git
+APP_DIR=/volume1/docker/wiregene-portal
+REPO_URL=https://github.com/rhhyun/wiregene-portal.git
 if [ ! -d "\$APP_DIR/.git" ]; then
   if [ -e "\$APP_DIR" ]; then
     echo "ERROR: \$APP_DIR exists but is not a Git checkout."
@@ -112,10 +109,7 @@ if [ ! -d "\$APP_DIR/.git" ]; then
 fi
 git -C "\$APP_DIR" pull --ff-only origin main
 /bin/sh "\$APP_DIR/scripts/synology-write-backup-md.sh"
-/bin/sh "\$APP_DIR/scripts/synology-migrate-auth-env.sh"
-/bin/sh "\$APP_DIR/scripts/synology-bootstrap-service-repos.sh"
-/bin/sh /volume1/docker/wiregene-meta-analysis/scripts/synology-start-meta.sh
-/bin/sh /volume1/docker/wiregene-portal/scripts/synology-start-portal.sh
+/bin/sh "\$APP_DIR/scripts/synology-update-portal.sh"
 \`\`\`
 
 The Synology backup writer updates this file locally. To make the updated
@@ -127,10 +121,11 @@ development machine after reviewing it.
 - \`backup.md\`: latest handoff snapshot.
 - \`scripts/write-backup-md.ps1\`: Windows backup writer.
 - \`scripts/synology-write-backup-md.sh\`: Synology backup writer.
-- \`scripts/synology-bootstrap-service-repos.sh\`: separated Synology source checkout bootstrapper.
-- \`scripts/synology-migrate-auth-env.sh\`: safe auth env migration helper.
-- \`docs/wiregene-service-repo-split.md\`: GitHub/Vercel/Synology split plan.
 - \`docs/synology-meta-portal-split.md\`: transition NAS layout and scheduler notes.
+- \`scripts/synology-update-portal.sh\`: full Synology update, build, restart,
+  local health check, version check, and public route check.
+- \`scripts/synology-start-portal.sh\`: Synology container build/restart helper.
+- \`synology/docker/portal/.env.example\`: runtime environment template.
 - \`src/lib/version.ts\`: visible application version.
 
 ## Verification Checklist
@@ -139,8 +134,8 @@ development machine after reviewing it.
 - \`npx.cmd tsc --noEmit --pretty false --incremental false\`
 - \`npm.cmd run build\`
 - On Synology, syntax-check shell scripts with \`sh -n scripts/<name>.sh\`.
-- After deployment, confirm \`search.wiregene.com\`, \`meta.wiregene.com\`, and
-  \`portal.wiregene.com\` route to the expected service surfaces.
+- After deployment, confirm \`portal.wiregene.com\` does not return
+  \`Server: Vercel\` or \`X-Vercel-Id\` headers.
 
 ## Manual Handoff Notes
 
