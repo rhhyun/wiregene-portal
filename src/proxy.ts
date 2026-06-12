@@ -18,6 +18,12 @@ export async function proxy(request: NextRequest) {
       : new NextResponse("Not found.", { status: 404 });
   }
 
+  if (isPortalStorageHealthPath(request.nextUrl.pathname, mode)) {
+    return isAuthorizedStorageHealthRequest(request)
+      ? NextResponse.next()
+      : new NextResponse("Not found.", { status: 404 });
+  }
+
   if (!isPathAllowedForMode(request.nextUrl.pathname, mode)) {
     return new NextResponse("Not found.", { status: 404 });
   }
@@ -110,6 +116,15 @@ function isPortalAuthCheckPath(pathname: string, mode: WiregeneAppMode) {
 function isAuthorizedInternalAuthCheckRequest(request: NextRequest) {
   const secret = getAuthCheckSecret();
   return Boolean(secret && request.headers.get("x-wiregene-auth-check-secret") === secret);
+}
+
+function isPortalStorageHealthPath(pathname: string, mode: WiregeneAppMode) {
+  return mode === "portal" && pathname === "/api/admin/storage-health";
+}
+
+function isAuthorizedStorageHealthRequest(request: NextRequest) {
+  const secret = normalizeAuthEnvValue(process.env.PORTAL_STORAGE_HEALTH_SECRET);
+  return Boolean(secret && request.headers.get("x-wiregene-storage-health-secret") === secret);
 }
 
 function getAuthCheckSecret() {

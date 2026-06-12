@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-13 07:07:29 +09:00
+Generated: 2026-06-13 07:11:33 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,8 +11,8 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: bd11aab Improve portal storage diagnostics
-- App version: Ver 1.47
+- Latest known commit: e006bc4 Add portal storage health check
+- App version: Ver 1.48
 
 ## Git Status At Generation
 
@@ -21,7 +21,7 @@ Env-like paths are intentionally omitted from this section.
 ```text
 M backup.md
  M src/lib/version.ts
-?? src/app/api/admin/storage-health/
+ M src/proxy.ts
 ```
 
 ## Active Work Summary
@@ -149,4 +149,7 @@ Current production route issue as of 2026-06-12:
   `PORTAL_STORAGE_HEALTH_SECRET` via `x-wiregene-storage-health-secret`, so
   production can verify Portal account Google Drive storage without relying on
   browser Basic Auth state. Without the secret it returns 404.
+- The Portal proxy must also allow `/api/admin/storage-health` through when
+  the same health secret header matches; otherwise Basic Auth blocks the route
+  before the health handler can run.
 <!-- MANUAL-NOTES-END -->
