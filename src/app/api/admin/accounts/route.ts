@@ -34,6 +34,7 @@ export async function GET(request: Request) {
     portalAccounts = await listPortalAccountSummaries();
   } catch (error) {
     portalAccountStorageError = grantStorageErrorDetails(error);
+    logPortalAccountStorageError("list", error);
   }
 
   const accounts = [...environmentAccounts, ...portalAccounts];
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
+    logPortalAccountStorageError("create", error);
     return accountErrorResponse(error);
   }
 }
@@ -104,6 +106,7 @@ export async function PATCH(request: Request) {
     const result = await resetPortalAccountPassword(payload.accountId);
     return NextResponse.json(result);
   } catch (error) {
+    logPortalAccountStorageError("reset-password", error);
     return accountErrorResponse(error);
   }
 }
@@ -152,7 +155,10 @@ async function isAuthenticatedAdminRequest(request: Request) {
     username: providedCredential.username,
     password: providedCredential.password,
     site: "portal",
-  }).catch(() => null);
+  }).catch((error) => {
+    logPortalAccountStorageError("verify", error);
+    return null;
+  });
 
   return portalAccount?.role === "admin";
 }
@@ -204,4 +210,12 @@ function accountErrorResponse(error: unknown) {
     },
     { status: 400 },
   );
+}
+
+function logPortalAccountStorageError(context: string, error: unknown) {
+  const details = grantStorageErrorDetails(error);
+  console.error("[api/admin/accounts] portal account storage error", {
+    context,
+    details,
+  });
 }

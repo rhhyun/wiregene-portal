@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-12 21:46:15 +09:00
+Generated: 2026-06-13 07:02:11 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,15 +11,19 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: 14ac21a Add Vercel Google Drive portal setup script
-- App version: Ver 1.45
+- Latest known commit: 1051225 Support existing Vercel Google Drive secrets
+- App version: Ver 1.46
 
 ## Git Status At Generation
 
 Env-like paths are intentionally omitted from this section.
 
 ```text
-(clean or unavailable)
+M backup.md
+ M package.json
+ M src/app/api/admin/accounts/route.ts
+ M src/lib/version.ts
+?? scripts/vercel-audit-google-drive-env.ps1
 ```
 
 ## Active Work Summary
@@ -126,4 +130,21 @@ Current production route issue as of 2026-06-12:
   `wiregene-portal`. Added `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive` and
   `PORTAL_ACCOUNT_STORAGE_PATH_DRIVE_FILENAME=portal-accounts.json`, then
   redeployed production and aliased `portal.wiregene.com`.
+- 2026-06-13: Portal account storage reached `backend=google-drive`, then
+  failed at Google OAuth refresh with `invalid_grant`. This means the old
+  `/var/task` local-json problem is no longer the active failure; the Portal
+  Vercel Google Drive OAuth client/refresh-token pair is invalid or mismatched.
+- Vercel marks these production env vars as `sensitive`; per Vercel behavior
+  they are non-readable after creation. CLI/API returns `decrypted=false` and
+  `valueLength=0`, so do not assume the values are empty and do not try to
+  recover them by `vercel env pull`.
+- Added `scripts/vercel-audit-google-drive-env.ps1` /
+  `npm run vercel:audit-google-drive-env` to compare Portal/Search/Meta
+  Google Drive env metadata without printing secrets.
+- Added a Search repo workflow at
+  `C:\Users\rhhyu\Documents\GitHub\research-briefing-platform\.github\workflows\sync-portal-google-drive-env.yml`.
+  It uses Search GitHub Actions secrets as the source of the known Google Drive
+  OAuth values, writes them to the `wiregene-portal` Vercel project, then
+  redeploys the latest Portal production deployment. This avoids issuing a new
+  Google refresh token.
 <!-- MANUAL-NOTES-END -->
