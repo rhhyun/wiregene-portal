@@ -18,6 +18,7 @@ import {
   portalSites,
   resetPortalAccountPassword,
   setPortalSiteCredentialPassword,
+  updatePortalAccount,
   verifyPortalAccountCredentials,
   type PortalSiteId,
 } from "@/lib/portal-accounts";
@@ -125,12 +126,35 @@ export async function PATCH(request: Request) {
     const payload = (await request.json()) as {
       accountId?: string;
       siteCredentialId?: string;
-      action?: "reset-password" | "set-site-credential-password";
+      action?: "reset-password" | "update-account" | "set-site-credential-password";
       password?: string;
+      username?: string;
+      email?: string;
+      role?: "admin" | "user";
+      sites?: string[];
+      disabled?: boolean;
     };
 
-    if (payload.action === "reset-password" && payload.accountId) {
+    if (payload.action === "reset-password") {
+      if (!payload.accountId) {
+        return NextResponse.json({ error: "Account id is required." }, { status: 400 });
+      }
       const result = await resetPortalAccountPassword(payload.accountId);
+      return NextResponse.json(result);
+    }
+
+    if (payload.action === "update-account") {
+      if (!payload.accountId) {
+        return NextResponse.json({ error: "Account id is required." }, { status: 400 });
+      }
+      const result = await updatePortalAccount({
+        accountId: payload.accountId,
+        username: payload.username,
+        email: payload.email,
+        role: payload.role,
+        sites: payload.sites,
+        disabled: payload.disabled,
+      });
       return NextResponse.json(result);
     }
 

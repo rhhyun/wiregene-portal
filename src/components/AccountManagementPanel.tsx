@@ -5,11 +5,14 @@ import {
   Database,
   KeyRound,
   ListChecks,
+  Pencil,
   Plus,
   RefreshCw,
   RotateCcw,
+  Save,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -116,6 +119,14 @@ type TemporaryPasswordState = {
   password: string;
 } | null;
 
+type AccountEditDraft = {
+  username: string;
+  email: string;
+  role: "admin" | "user";
+  sites: string[];
+  disabled: boolean;
+};
+
 export function AccountManagementPanel() {
   const [state, setState] = useState<AccountState>({
     status: "loading",
@@ -137,9 +148,12 @@ export function AccountManagementPanel() {
     password: "",
   });
   const [credentialDrafts, setCredentialDrafts] = useState<Record<string, string>>({});
+  const [accountDrafts, setAccountDrafts] = useState<Record<string, AccountEditDraft>>({});
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<TemporaryPasswordState>(null);
   const [submitting, setSubmitting] = useState(false);
   const [siteSubmitting, setSiteSubmitting] = useState(false);
+  const [updatingAccountId, setUpdatingAccountId] = useState<string | null>(null);
   const [updatingCredentialId, setUpdatingCredentialId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -236,6 +250,122 @@ export function AccountManagementPanel() {
       }));
     } finally {
       setSiteSubmitting(false);
+    }
+  }
+
+  function buildAccountDraft(account: AccountSummary): AccountEditDraft {
+    const allSiteIds = state.sites.map((site) => site.id);
+    const currentSites = account.sites?.length ? account.sites : ["portal"];
+
+    return {
+      username: account.username,
+      email: account.email ?? "",
+      role: account.role === "admin" ? "admin" : "user",
+      sites: account.role === "admin" ? allSiteIds : Array.from(new Set(["portal", ...currentSites])),
+      disabled: Boolean(account.disabled),
+    };
+  }
+
+  function beginEditAccount(account: AccountSummary) {
+    if (!account.id) return;
+    setAccountDrafts((current) => ({
+      ...current,
+      [account.id as string]: current[account.id as string] ?? buildAccountDraft(account),
+    }));
+    setEditingAccountId(account.id);
+  }
+
+  function cancelEditAccount(accountId: string) {
+    setEditingAccountId((current) => (current === accountId ? null : current));
+    setAccountDrafts((current) => {
+      const next = { ...current };
+      delete next[accountId];
+      return next;
+    });
+  }
+
+  function updateAccountDraft(accountId: string, patch: Partial<AccountEditDraft>) {
+    setAccountDrafts((current) => {
+      const draft = current[accountId];
+      if (!draft) return current;
+      return {
+        ...current,
+        [accountId]: { ...draft, ...patch },
+      };
+    });
+  }
+
+  function changeAccountDraftRole(accountId: string, nextRole: "admin" | "user") {
+    setAccountDrafts((current) => {
+      const draft = current[accountId];
+      if (!draft) return current;
+      const allSiteIds = state.sites.map((site) => site.id);
+      const fallbackSites = ["portal", "omni", "search"].filter((siteId) => allSiteIds.includes(siteId));
+      return {
+        ...current,
+        [accountId]: {
+          ...draft,
+          role: nextRole,
+          sites: nextRole === "admin" ? allSiteIds : Array.from(new Set(["portal", ...(draft.sites.length ? draft.sites : fallbackSites)])),
+        },
+      };
+    });
+  }
+
+  function toggleAccountDraftSite(accountId: string, siteId: string) {
+    setAccountDrafts((current) => {
+      const draft = current[accountId];
+      if (!draft || draft.role === "admin") return current;
+      if (siteId === "portal") {
+        return { ...current, [accountId]: { ...draft, sites: Array.from(new Set(["portal", ...draft.sites])) } };
+      }
+
+      const sites = draft.sites.includes(siteId)
+        ? draft.sites.filter((item) => item !== siteId)
+        : [...draft.sites, siteId];
+
+      return {
+        ...current,
+        [accountId]: { ...draft, sites: Array.from(new Set(["portal", ...sites])) },
+      };
+    });
+  }
+
+  async function saveAccount(account: AccountSummary) {
+    if (!account.id) return;
+    const draft = accountDrafts[account.id] ?? buildAccountDraft(account);
+    setUpdatingAccountId(account.id);
+
+    try {
+      const response = await fetch("/api/admin/accounts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId: account.id,
+          action: "update-account",
+          username: draft.username,
+          email: draft.email,
+          role: draft.role,
+          sites: draft.sites,
+          disabled: draft.disabled,
+        }),
+      });
+      const payload = await readAccountApiPayload(response);
+
+      if (!response.ok || !payload.account) {
+        throw new Error(formatApiError(payload.error || `HTTP ${response.status}`, payload.details));
+      }
+
+      cancelEditAccount(account.id);
+      await reloadAccounts("Portal 계정을 변경했습니다.");
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        status: "error",
+        message: error instanceof Error ? error.message : "Account update failed.",
+      }));
+    } finally {
+      setUpdatingAccountId(null);
     }
   }
 
@@ -640,45 +770,147 @@ export function AccountManagementPanel() {
 
         {state.accounts.length ? (
           <div className="mt-4 grid gap-3">
-            {state.accounts.map((account) => (
-              <div
-                key={`${account.source}:${account.id ?? account.username}`}
-                className="grid gap-3 rounded-lg border border-zinc-200 px-4 py-3 lg:grid-cols-[1fr_auto]"
-              >
-                <div className="min-w-0">
-                  <AccountHeading account={account} />
-                  {account.email ? <p className="mt-1 text-xs text-zinc-500">{account.email}</p> : null}
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {(account.sites ?? []).map((siteId) => (
-                      <span key={siteId} className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                        {siteLabel(siteId, state.sites)}
-                      </span>
-                    ))}
+            {state.accounts.map((account) => {
+              const draft = account.id ? accountDrafts[account.id] : undefined;
+              const isEditing = Boolean(account.id && editingAccountId === account.id && draft);
+
+              return (
+                <div
+                  key={`${account.source}:${account.id ?? account.username}`}
+                  className="grid gap-3 rounded-lg border border-zinc-200 px-4 py-3 lg:grid-cols-[1fr_auto]"
+                >
+                  <div className="min-w-0">
+                    <AccountHeading account={account} />
+                    {account.email ? <p className="mt-1 text-xs text-zinc-500">{account.email}</p> : null}
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {(account.sites ?? []).map((siteId) => (
+                        <span key={siteId} className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+                          {siteLabel(siteId, state.sites)}
+                        </span>
+                      ))}
+                    </div>
                   </div>
+                  {state.writable && account.source === "PORTAL_ACCOUNTS" ? (
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => beginEditAccount(account)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50"
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden />
+                        ID 변경
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void resetPassword(account)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                        PW 재발급
+                      </button>
+                      <button
+                        type="button"
+                        disabled={deletingId === account.id}
+                        onClick={() => void deleteAccount(account)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-zinc-400"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                        삭제
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {isEditing && account.id && draft ? (
+                    <div className="grid gap-4 border-t border-zinc-100 pt-4 lg:col-span-2">
+                      <div className="grid gap-4 lg:grid-cols-[1fr_1fr_10rem_auto]">
+                        <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                          ID
+                          <input
+                            value={draft.username}
+                            onChange={(event) => updateAccountDraft(account.id as string, { username: event.target.value })}
+                            className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                          />
+                        </label>
+                        <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                          Email
+                          <input
+                            value={draft.email}
+                            onChange={(event) => updateAccountDraft(account.id as string, { email: event.target.value })}
+                            type="email"
+                            className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                          />
+                        </label>
+                        <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                          Role
+                          <select
+                            value={draft.role}
+                            onChange={(event) => changeAccountDraftRole(account.id as string, event.target.value === "admin" ? "admin" : "user")}
+                            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                          >
+                            <option value="user">사용자</option>
+                            <option value="admin">관리자</option>
+                          </select>
+                        </label>
+                        <label className="flex items-center gap-2 self-end text-sm font-semibold text-zinc-700">
+                          <input
+                            checked={draft.disabled}
+                            onChange={(event) => updateAccountDraft(account.id as string, { disabled: event.target.checked })}
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-zinc-300 text-emerald-700 focus:ring-emerald-500"
+                          />
+                          비활성
+                        </label>
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-700">접근 가능한 사이트</p>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                          {state.sites.map((site) => {
+                            const checked = draft.sites.includes(site.id);
+                            return (
+                              <button
+                                key={site.id}
+                                type="button"
+                                disabled={draft.role === "admin"}
+                                onClick={() => toggleAccountDraftSite(account.id as string, site.id)}
+                                className={`flex h-11 items-center justify-between rounded-md border px-3 text-sm font-semibold transition disabled:cursor-not-allowed ${
+                                  checked
+                                    ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                                    : "border-zinc-300 bg-white text-zinc-700 hover:border-emerald-200"
+                                }`}
+                              >
+                                {site.shortLabel}
+                                {checked ? <Check className="h-4 w-4" aria-hidden /> : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={updatingAccountId === account.id}
+                          onClick={() => void saveAccount(account)}
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
+                        >
+                          <Save className="h-4 w-4" aria-hidden />
+                          저장
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => cancelEditAccount(account.id as string)}
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50"
+                        >
+                          <X className="h-4 w-4" aria-hidden />
+                          취소
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-                {state.writable && account.source === "PORTAL_ACCOUNTS" ? (
-                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                    <button
-                      type="button"
-                      onClick={() => void resetPassword(account)}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-                      PW 재발급
-                    </button>
-                    <button
-                      type="button"
-                      disabled={deletingId === account.id}
-                      onClick={() => void deleteAccount(account)}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-zinc-400"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                      삭제
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : state.status === "loading" ? (
           <p className="mt-4 text-sm text-zinc-500">계정 정보를 불러오는 중입니다.</p>

@@ -89,7 +89,7 @@ export function PortalDashboard({
             </span>
             <div>
               <p className="text-sm font-semibold text-emerald-700">Wiregene Portal</p>
-              <h1 className="text-2xl font-semibold tracking-normal">통합 로그인 및 ID 관리</h1>
+              <h1 className="text-2xl font-semibold tracking-normal">통합 로그인 및 ID/PW 관리</h1>
               <p className="mt-1 text-xs font-medium text-zinc-500">{versionLabel}</p>
             </div>
           </div>

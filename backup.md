@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-13 18:25:44 +09:00
+Generated: 2026-06-13 19:32:59 +0900
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,25 +11,23 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: 4ca7a7f Relax Synology public route check
-- App version: Ver 1.50
+- Latest known commit: fdcaf31 Manage ID and password lifecycle in portal
+- App version: Ver 1.51
 
 ## Git Status At Generation
 
 Env-like paths are intentionally omitted from this section.
 
 ```text
-M src/app/api/admin/accounts/route.ts
- M src/components/AccountManagementPanel.tsx
- M src/components/PortalDashboard.tsx
- M src/lib/basic-auth-users.ts
- M src/lib/portal-accounts.ts
- M src/lib/version.ts
+(clean after omitting env-like paths)
 ```
 
 ## Active Work Summary
 
 - `portal.wiregene.com` is the Wiregene account and site launcher service.
+- ID/PW add, delete, and change operations are managed from
+  `portal.wiregene.com`; `APP_BASIC_AUTH_*` values are reserved for
+  break-glass/bootstrap access.
 - Portal account ID storage is intended to run on Synology with
   `PORTAL_ACCOUNT_STORAGE_BACKEND=local-json`.
 - If `portal.wiregene.com` is served by Vercel, account storage must use

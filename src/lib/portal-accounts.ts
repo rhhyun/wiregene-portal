@@ -18,16 +18,16 @@ export const portalSites = [
     url: "https://www.wiregene.com/admin",
   },
   {
-    id: "omni",
-    label: "Omni Research Writing",
-    shortLabel: "Omni",
-    url: "https://omni.wiregene.com",
-  },
-  {
     id: "search",
     label: "Research Search",
     shortLabel: "Search",
     url: "https://search.wiregene.com",
+  },
+  {
+    id: "omni",
+    label: "Wiregene Omni",
+    shortLabel: "Omni",
+    url: "https://omni.wiregene.com",
   },
   {
     id: "meta",
@@ -215,6 +215,44 @@ export async function resetPortalAccountPassword(accountId: string) {
   return {
     account: toAccountSummary(account),
     temporaryPassword,
+  };
+}
+
+export async function updatePortalAccount(input: {
+  accountId: string;
+  username?: string;
+  email?: string;
+  role?: PortalRole;
+  sites?: string[];
+  disabled?: boolean;
+}) {
+  const data = await portalAccountStorage.read();
+  const account = data.accounts.find((candidate) => candidate.id === input.accountId);
+  if (!account) throw new Error("Account not found.");
+
+  const username = normalizeUsername(input.username ?? account.username);
+  if (!username) throw new Error("Username is required.");
+  if (
+    data.accounts.some(
+      (candidate) =>
+        candidate.id !== account.id && candidate.username.toLowerCase() === username.toLowerCase(),
+    )
+  ) {
+    throw new Error(`Account already exists: ${username}`);
+  }
+
+  const role = input.role === "admin" || input.role === "user" ? input.role : account.role;
+  account.username = username;
+  account.email = normalizeEmail(input.email ?? account.email);
+  account.role = role;
+  account.sites = role === "admin" ? portalSiteIds() : normalizeSites(input.sites ?? account.sites);
+  account.disabled = typeof input.disabled === "boolean" ? input.disabled : account.disabled;
+  account.updatedAt = new Date().toISOString();
+
+  await portalAccountStorage.write(data);
+
+  return {
+    account: toAccountSummary(account),
   };
 }
 
@@ -453,6 +491,7 @@ function normalizeSites(value: unknown): PortalSiteId[] {
   const allowed = new Set(portalSiteIds());
   const requested = Array.isArray(value) ? value : ["portal"];
   const sites = requested.filter((site): site is PortalSiteId => typeof site === "string" && allowed.has(site as PortalSiteId));
+  if (sites.includes("search") && !sites.includes("omni")) sites.push("omni");
   return Array.from(new Set<PortalSiteId>(["portal", ...sites]));
 }
 

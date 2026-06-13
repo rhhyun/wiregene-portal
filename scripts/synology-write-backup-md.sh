@@ -72,6 +72,9 @@ $status
 ## Active Work Summary
 
 - \`portal.wiregene.com\` is the Wiregene account and site launcher service.
+- ID/PW add, delete, and change operations are managed from
+  \`portal.wiregene.com\`; \`APP_BASIC_AUTH_*\` values are reserved for
+  break-glass/bootstrap access.
 - Portal account ID storage is intended to run on Synology with
   \`PORTAL_ACCOUNT_STORAGE_BACKEND=local-json\`.
 - If \`portal.wiregene.com\` is served by Vercel, account storage must use

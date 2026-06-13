@@ -35,6 +35,8 @@ folder for `meta` or `portal`. It remains the source folder for
 - Synology scheduler tasks should not depend on a shared source checkout.
 - Portal account management, meta-analysis workflows, and search/briefing jobs
   have different environment variables and failure modes.
+- ID/PW add, delete, and change operations belong in `portal.wiregene.com`,
+  not in per-service Vercel environment variable edits after bootstrap.
 - Each service can be deployed, rolled back, and restarted independently.
 
 ## Create Standalone Repositories

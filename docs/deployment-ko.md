@@ -81,7 +81,7 @@ NCBI_API_KEY=NCBI API key
 ```text
 search.wiregene.com  -> Research Briefing / 연구과제 / 논문 관리
 meta.wiregene.com    -> Meta-analysis only
-portal.wiregene.com  -> Portal / account management / site launcher
+portal.wiregene.com  -> Portal / ID/PW management / site launcher
 ```
 
 같은 Vercel 프로젝트에 세 도메인을 모두 연결합니다. `WIREGENE_APP_MODE`는

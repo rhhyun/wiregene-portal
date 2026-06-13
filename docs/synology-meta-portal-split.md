@@ -180,5 +180,8 @@ file from a trusted development machine so other PCs can pull a clean handoff.
   Auth login and receive all portal site permissions.
 - Portal-created admin accounts receive all registered site permissions. Runtime
   Basic Auth still reads `APP_BASIC_AUTH_*` values.
+- After bootstrap, add, delete, and change Wiregene IDs and passwords from
+  `portal.wiregene.com` only. Keep `APP_BASIC_AUTH_*` as break-glass/bootstrap
+  credentials instead of using them for routine account lifecycle work.
 - On a shared Vercel project, leave `WIREGENE_APP_MODE` empty so host detection
   can split `search`, `meta`, and `portal` automatically.
