@@ -2,11 +2,11 @@ import type { ResearchReport } from "./types";
 
 const INITIAL_BRIEFING_VERSION = "0.1";
 
-export const BRIEFING_VERSION = "1.51";
+export const BRIEFING_VERSION = "1.52";
 export const BRIEFING_VERSION_LABEL = formatVersionLabel(BRIEFING_VERSION);
 
 function formatVersionLabel(version: string) {
-  return `Ver ${version}`;
+  return `Ver ${version} | 2026 copyright by JK Hyun`;
 }
 
 export function reportVersionLabel(report: Pick<ResearchReport, "raw">) {

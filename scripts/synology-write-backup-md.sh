@@ -34,14 +34,14 @@ version=$(read_version)
 branch=$(git_text rev-parse --abbrev-ref HEAD | sed -n '1p')
 commit=$(git_text log -1 --oneline | sed -n '1p')
 remote=$(git_text remote get-url origin | sed -n '1p')
-status=$(git_text status --short | grep -v '[.]env' || true)
+status=$(git_text status --short | grep -v '[.]env' | grep -v 'backup[.]md$' || true)
 manual_notes=$(read_manual_notes)
 
 [ -n "$version" ] || version="unknown"
 [ -n "$branch" ] || branch="unknown"
 [ -n "$commit" ] || commit="unknown"
 [ -n "$remote" ] || remote="unknown"
-[ -n "$status" ] || status="(clean after omitting env-like paths)"
+[ -n "$status" ] || status="(clean after omitting env-like paths and backup.md)"
 [ -n "$manual_notes" ] || manual_notes="Add handoff notes here when a task has context that is not captured by git status."
 
 cat > "$TMP_PATH" <<EOF
@@ -63,7 +63,7 @@ values in this file.
 
 ## Git Status At Generation
 
-Env-like paths are intentionally omitted from this section.
+Env-like paths and backup.md are intentionally omitted from this section.
 
 \`\`\`text
 $status

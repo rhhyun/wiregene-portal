@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-13 19:32:59 +0900
+Generated: 2026-06-13 21:02:57 +0900
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,15 +11,15 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: fdcaf31 Manage ID and password lifecycle in portal
-- App version: Ver 1.51
+- Latest known commit: 16d0197 Add copyright to version label
+- App version: Ver 1.52
 
 ## Git Status At Generation
 
-Env-like paths are intentionally omitted from this section.
+Env-like paths and backup.md are intentionally omitted from this section.
 
 ```text
-(clean after omitting env-like paths)
+(clean after omitting env-like paths and backup.md)
 ```
 
 ## Active Work Summary

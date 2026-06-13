@@ -50,11 +50,11 @@ function Get-FilteredStatus {
 
   $lines = $status -split "`n" | Where-Object {
     $line = $_.TrimEnd()
-    $line -and ($line -notmatch '\.env')
+    $line -and ($line -notmatch '\.env') -and ($line -notmatch 'backup\.md$')
   }
 
   if (-not $lines -or $lines.Count -eq 0) {
-    return "(clean after omitting env-like paths)"
+    return "(clean after omitting env-like paths and backup.md)"
   }
 
   return ($lines -join "`n")
@@ -109,7 +109,7 @@ values in this file.
 
 ## Git Status At Generation
 
-Env-like paths are intentionally omitted from this section.
+Env-like paths and backup.md are intentionally omitted from this section.
 
 ```text
 __STATUS__
