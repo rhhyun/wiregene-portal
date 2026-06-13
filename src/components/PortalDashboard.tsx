@@ -22,6 +22,13 @@ const launcherSites = [
     icon: Globe2,
   },
   {
+    label: "Omni Research Writing",
+    shortLabel: "Omni",
+    href: "https://omni.wiregene.com/?wiregene_from=portal",
+    detail: "연구와 논문 작성 통합 작업 페이지",
+    icon: BookOpenText,
+  },
+  {
     label: "Research Search",
     shortLabel: "Search",
     href: "https://search.wiregene.com/?wiregene_from=portal",

@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-13 08:16:19 +09:00
+Generated: 2026-06-13 18:25:44 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,19 +11,20 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: 3ada414 Add portal refresh token helper
-- App version: Ver 1.49
+- Latest known commit: 4ca7a7f Relax Synology public route check
+- App version: Ver 1.50
 
 ## Git Status At Generation
 
 Env-like paths are intentionally omitted from this section.
 
 ```text
- M backup.md
- M scripts/synology-update-portal.sh
- M scripts/synology-write-backup-md.sh
- M scripts/write-backup-md.ps1
- M synology/docker/portal/README.md
+M src/app/api/admin/accounts/route.ts
+ M src/components/AccountManagementPanel.tsx
+ M src/components/PortalDashboard.tsx
+ M src/lib/basic-auth-users.ts
+ M src/lib/portal-accounts.ts
+ M src/lib/version.ts
 ```
 
 ## Active Work Summary
@@ -212,4 +213,8 @@ Current production route issue as of 2026-06-12:
   writes will always fail with `/var/task`; it now explains Vercel public
   routing vs Synology public routing and only fails on Vercel headers when
   `PUBLIC_PORTAL_ROUTE_POLICY=synology`.
+- 2026-06-13: Added `omni.wiregene.com` to Portal launcher and account
+  management. Portal login accounts now stay separate from `siteCredentials`,
+  which store site-specific ID/PW hashes for create, delete, and password
+  change flows without mixing different subsite passwords.
 <!-- MANUAL-NOTES-END -->

@@ -18,6 +18,7 @@ export type BasicAuthAccountSummary = {
 export const WIREGENE_ADMIN_SITE_IDS = [
   "portal",
   "homepage-admin",
+  "omni",
   "search",
   "meta",
   "hyunlab",

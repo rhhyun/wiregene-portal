@@ -3,11 +3,12 @@
 import {
   Check,
   Database,
+  KeyRound,
   ListChecks,
   Plus,
   RefreshCw,
   RotateCcw,
-  ShieldCheck,
+  Trash2,
   Users,
 } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
@@ -36,6 +37,20 @@ type AccountSummary = {
   updatedAt?: string;
 };
 
+type SiteCredentialSummary = {
+  id: string;
+  siteId: string;
+  username: string;
+  email?: string;
+  label?: string;
+  source: "SITE_CREDENTIALS";
+  passwordConfigured: boolean;
+  passwordUpdatedAt?: string;
+  disabled?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 type SiteAccount = Pick<
   AccountSummary,
   "id" | "username" | "email" | "role" | "source" | "passwordConfigured" | "mustChangePassword" | "disabled"
@@ -46,13 +61,21 @@ type SiteAccountList = PortalSite & {
   accounts: SiteAccount[];
 };
 
+type SiteCredentialList = PortalSite & {
+  count: number;
+  credentials: SiteCredentialSummary[];
+};
+
 type AccountState = {
   status: "loading" | "ready" | "error";
   accounts: AccountSummary[];
   sites: PortalSite[];
   siteAccountLists: SiteAccountList[];
+  siteCredentials: SiteCredentialSummary[];
+  siteCredentialLists: SiteCredentialList[];
   message?: string;
   warning?: string;
+  notice?: string;
   managedBy?: string;
   writable?: boolean;
 };
@@ -73,16 +96,22 @@ type AccountApiPayload = {
   accounts?: AccountSummary[];
   sites?: PortalSite[];
   siteAccountLists?: SiteAccountList[];
+  siteCredentials?: SiteCredentialSummary[];
+  siteCredentialLists?: SiteCredentialList[];
   managedBy?: string;
   writable?: boolean;
   account?: AccountSummary;
+  siteCredential?: SiteCredentialSummary;
   temporaryPassword?: string;
+  generatedPassword?: boolean;
+  deleted?: boolean;
   error?: string;
   details?: ApiErrorDetails;
   portalAccountStorageError?: ApiErrorDetails;
 };
 
 type TemporaryPasswordState = {
+  label: string;
   username: string;
   password: string;
 } | null;
@@ -93,27 +122,40 @@ export function AccountManagementPanel() {
     accounts: [],
     sites: [],
     siteAccountLists: [],
+    siteCredentials: [],
+    siteCredentialLists: [],
   });
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
-  const [selectedSites, setSelectedSites] = useState<string[]>(["portal", "search"]);
+  const [selectedSites, setSelectedSites] = useState<string[]>(["portal", "omni", "search"]);
+  const [siteForm, setSiteForm] = useState({
+    siteId: "omni",
+    username: "",
+    email: "",
+    label: "",
+    password: "",
+  });
+  const [credentialDrafts, setCredentialDrafts] = useState<Record<string, string>>({});
   const [temporaryPassword, setTemporaryPassword] = useState<TemporaryPasswordState>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [siteSubmitting, setSiteSubmitting] = useState(false);
+  const [updatingCredentialId, setUpdatingCredentialId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const managedAccounts = useMemo(
     () => state.accounts.filter((account) => account.source === "PORTAL_ACCOUNTS"),
     [state.accounts],
   );
-  const siteAccountLists = useMemo(() => {
-    if (state.siteAccountLists.length) return state.siteAccountLists;
-    return buildSiteAccountLists(state.sites, state.accounts);
-  }, [state.accounts, state.siteAccountLists, state.sites]);
-  const environmentAccounts = state.accounts.length - managedAccounts.length;
+  const siteCredentialLists = useMemo(() => {
+    if (state.siteCredentialLists.length) return state.siteCredentialLists;
+    return buildSiteCredentialLists(state.sites, state.siteCredentials);
+  }, [state.siteCredentialLists, state.siteCredentials, state.sites]);
 
-  async function reloadAccounts() {
-    setState((current) => ({ ...current, status: "loading", message: undefined, warning: undefined }));
-    setState(await getAccountState());
+  async function reloadAccounts(notice?: string) {
+    setState((current) => ({ ...current, status: "loading", message: undefined, warning: undefined, notice }));
+    const nextState = await getAccountState();
+    setState({ ...nextState, notice });
   }
 
   async function createAccount(event: FormEvent<HTMLFormElement>) {
@@ -125,7 +167,7 @@ export function AccountManagementPanel() {
       const response = await fetch("/api/admin/accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, role, sites: selectedSites }),
+        body: JSON.stringify({ kind: "portal-account", username, email, role, sites: selectedSites }),
       });
       const payload = await readAccountApiPayload(response);
 
@@ -136,12 +178,13 @@ export function AccountManagementPanel() {
       setUsername("");
       setEmail("");
       setRole("user");
-      setSelectedSites(["portal", "search"]);
+      setSelectedSites(["portal", "omni", "search"]);
       setTemporaryPassword({
+        label: "Portal 계정",
         username: payload.account.username,
         password: payload.temporaryPassword,
       });
-      await reloadAccounts();
+      await reloadAccounts("Portal 계정을 생성했습니다.");
     } catch (error) {
       setState((current) => ({
         ...current,
@@ -150,6 +193,49 @@ export function AccountManagementPanel() {
       }));
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function createSiteCredential(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSiteSubmitting(true);
+    setTemporaryPassword(null);
+
+    try {
+      const response = await fetch("/api/admin/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "site-credential", ...siteForm }),
+      });
+      const payload = await readAccountApiPayload(response);
+
+      if (!response.ok || !payload.siteCredential) {
+        throw new Error(formatApiError(payload.error || `HTTP ${response.status}`, payload.details));
+      }
+
+      setSiteForm((current) => ({
+        ...current,
+        username: "",
+        email: "",
+        label: "",
+        password: "",
+      }));
+      if (payload.temporaryPassword) {
+        setTemporaryPassword({
+          label: `${siteLabel(payload.siteCredential.siteId, state.sites)} 사이트 ID`,
+          username: payload.siteCredential.username,
+          password: payload.temporaryPassword,
+        });
+      }
+      await reloadAccounts("사이트 ID를 저장했습니다.");
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        status: "error",
+        message: error instanceof Error ? error.message : "Site credential creation failed.",
+      }));
+    } finally {
+      setSiteSubmitting(false);
     }
   }
 
@@ -170,16 +256,110 @@ export function AccountManagementPanel() {
       }
 
       setTemporaryPassword({
+        label: "Portal 계정",
         username: payload.account.username,
         password: payload.temporaryPassword,
       });
-      await reloadAccounts();
+      await reloadAccounts("Portal 계정 PW를 재발급했습니다.");
     } catch (error) {
       setState((current) => ({
         ...current,
         status: "error",
         message: error instanceof Error ? error.message : "Password reset failed.",
       }));
+    }
+  }
+
+  async function deleteAccount(account: AccountSummary) {
+    if (!account.id) return;
+    if (!window.confirm(`${account.username} Portal 계정을 삭제할까요?`)) return;
+
+    setDeletingId(account.id);
+    try {
+      const response = await fetch("/api/admin/accounts", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "portal-account", accountId: account.id }),
+      });
+      const payload = await readAccountApiPayload(response);
+      if (!response.ok) {
+        throw new Error(formatApiError(payload.error || `HTTP ${response.status}`, payload.details));
+      }
+      await reloadAccounts("Portal 계정을 삭제했습니다.");
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        status: "error",
+        message: error instanceof Error ? error.message : "Account deletion failed.",
+      }));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function changeSiteCredentialPassword(credential: SiteCredentialSummary) {
+    setTemporaryPassword(null);
+    setUpdatingCredentialId(credential.id);
+
+    try {
+      const response = await fetch("/api/admin/accounts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          siteCredentialId: credential.id,
+          action: "set-site-credential-password",
+          password: credentialDrafts[credential.id] ?? "",
+        }),
+      });
+      const payload = await readAccountApiPayload(response);
+
+      if (!response.ok || !payload.siteCredential) {
+        throw new Error(formatApiError(payload.error || `HTTP ${response.status}`, payload.details));
+      }
+
+      if (payload.temporaryPassword) {
+        setTemporaryPassword({
+          label: `${siteLabel(payload.siteCredential.siteId, state.sites)} 사이트 ID`,
+          username: payload.siteCredential.username,
+          password: payload.temporaryPassword,
+        });
+      }
+      setCredentialDrafts((current) => ({ ...current, [credential.id]: "" }));
+      await reloadAccounts("사이트 ID PW를 변경했습니다.");
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        status: "error",
+        message: error instanceof Error ? error.message : "Site credential password change failed.",
+      }));
+    } finally {
+      setUpdatingCredentialId(null);
+    }
+  }
+
+  async function deleteSiteCredential(credential: SiteCredentialSummary) {
+    if (!window.confirm(`${siteLabel(credential.siteId, state.sites)} / ${credential.username} ID를 삭제할까요?`)) return;
+
+    setDeletingId(credential.id);
+    try {
+      const response = await fetch("/api/admin/accounts", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "site-credential", siteCredentialId: credential.id }),
+      });
+      const payload = await readAccountApiPayload(response);
+      if (!response.ok) {
+        throw new Error(formatApiError(payload.error || `HTTP ${response.status}`, payload.details));
+      }
+      await reloadAccounts("사이트 ID를 삭제했습니다.");
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        status: "error",
+        message: error instanceof Error ? error.message : "Site credential deletion failed.",
+      }));
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -218,7 +398,7 @@ export function AccountManagementPanel() {
             <p className="text-sm font-semibold text-emerald-700">Access Control</p>
             <h2 className="mt-1 text-2xl font-semibold tracking-normal text-zinc-950">ID 관리</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Wiregene 서브사이트별 접근 ID와 Portal 계정을 한 곳에서 확인합니다.
+              Portal 로그인 계정과 사이트별 실제 접근 ID를 분리해서 관리합니다.
             </p>
           </div>
           <button
@@ -239,27 +419,46 @@ export function AccountManagementPanel() {
           value={`${managedAccounts.length}명`}
         />
         <StatusTile
-          icon={<ShieldCheck className="h-4 w-4" aria-hidden />}
-          label="환경변수 ID"
-          value={`${environmentAccounts}개`}
+          icon={<KeyRound className="h-4 w-4" aria-hidden />}
+          label="사이트별 ID"
+          value={`${state.siteCredentials.length}개`}
         />
         <StatusTile
           icon={<ListChecks className="h-4 w-4" aria-hidden />}
-          label="서브사이트 목록"
-          value={`${siteAccountLists.length}개`}
+          label="서브사이트"
+          value={`${siteCredentialLists.length}개`}
         />
       </section>
 
-      <SubsiteIdListSection siteAccountLists={siteAccountLists} status={state.status} />
+      <SiteCredentialListSection
+        siteCredentialLists={siteCredentialLists}
+        status={state.status}
+        writable={Boolean(state.writable)}
+        drafts={credentialDrafts}
+        deletingId={deletingId}
+        updatingCredentialId={updatingCredentialId}
+        onDraftChange={(credentialId, value) =>
+          setCredentialDrafts((current) => ({ ...current, [credentialId]: value }))
+        }
+        onPasswordChange={(credential) => void changeSiteCredentialPassword(credential)}
+        onDelete={(credential) => void deleteSiteCredential(credential)}
+      />
 
       {temporaryPassword ? (
         <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
           <p className="text-sm font-semibold text-emerald-800">임시 비밀번호 발급 완료</p>
           <div className="mt-3 grid gap-3 md:grid-cols-[12rem_1fr]">
+            <InfoLine label="구분" value={temporaryPassword.label} />
             <InfoLine label="ID" value={temporaryPassword.username} />
             <InfoLine label="Temporary PW" value={temporaryPassword.password} strong />
           </div>
         </section>
+      ) : null}
+
+      {state.notice ? (
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
+          {state.notice}
+        </p>
       ) : null}
 
       {state.message ? (
@@ -276,7 +475,82 @@ export function AccountManagementPanel() {
 
       {state.writable ? (
         <section className="rounded-lg border border-zinc-200 bg-white p-5">
-          <h3 className="text-lg font-semibold text-zinc-950">새 ID 등록</h3>
+          <h3 className="text-lg font-semibold text-zinc-950">사이트별 ID 등록</h3>
+          <form onSubmit={createSiteCredential} className="mt-4 grid gap-4">
+            <div className="grid gap-4 lg:grid-cols-[14rem_1fr_1fr]">
+              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                Site
+                <select
+                  value={siteForm.siteId}
+                  onChange={(event) => setSiteForm((current) => ({ ...current, siteId: event.target.value }))}
+                  className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                >
+                  {state.sites.map((site) => (
+                    <option key={site.id} value={site.id}>
+                      {site.shortLabel}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                ID
+                <input
+                  value={siteForm.username}
+                  onChange={(event) => setSiteForm((current) => ({ ...current, username: event.target.value }))}
+                  required
+                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                  placeholder="site-user"
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                PW
+                <input
+                  value={siteForm.password}
+                  onChange={(event) => setSiteForm((current) => ({ ...current, password: event.target.value }))}
+                  type="password"
+                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                  placeholder="비우면 자동 발급"
+                />
+              </label>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                Email
+                <input
+                  value={siteForm.email}
+                  onChange={(event) => setSiteForm((current) => ({ ...current, email: event.target.value }))}
+                  type="email"
+                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                  placeholder="name@example.com"
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                Label
+                <input
+                  value={siteForm.label}
+                  onChange={(event) => setSiteForm((current) => ({ ...current, label: event.target.value }))}
+                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                  placeholder="관리 메모"
+                />
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={siteSubmitting}
+              className="inline-flex h-11 w-fit items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              {siteSubmitting ? "저장 중" : "사이트 ID 생성"}
+            </button>
+          </form>
+        </section>
+      ) : null}
+
+      {state.writable ? (
+        <section className="rounded-lg border border-zinc-200 bg-white p-5">
+          <h3 className="text-lg font-semibold text-zinc-950">Portal 계정 등록</h3>
           <form onSubmit={createAccount} className="mt-4 grid gap-4">
             <div className="grid gap-4 lg:grid-cols-[1fr_1fr_10rem]">
               <label className="grid gap-2 text-sm font-semibold text-zinc-700">
@@ -314,7 +588,7 @@ export function AccountManagementPanel() {
 
             <div>
               <p className="text-sm font-semibold text-zinc-700">접근 가능한 사이트</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
                 {state.sites.map((site) => {
                   const checked = selectedSites.includes(site.id);
                   return (
@@ -342,7 +616,7 @@ export function AccountManagementPanel() {
               className="inline-flex h-11 w-fit items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
             >
               <Plus className="h-4 w-4" aria-hidden />
-              {submitting ? "등록 중" : "ID 생성"}
+              {submitting ? "등록 중" : "Portal ID 생성"}
             </button>
           </form>
         </section>
@@ -350,7 +624,7 @@ export function AccountManagementPanel() {
 
       <section className="rounded-lg border border-zinc-200 bg-white p-5">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold text-zinc-950">전체 계정 목록</h3>
+          <h3 className="text-lg font-semibold text-zinc-950">Portal 접근 권한 목록</h3>
           <span
             className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
               state.status === "error"
@@ -383,14 +657,25 @@ export function AccountManagementPanel() {
                   </div>
                 </div>
                 {state.writable && account.source === "PORTAL_ACCOUNTS" ? (
-                  <button
-                    type="button"
-                    onClick={() => void resetPassword(account)}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-                    PW 재발급
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => void resetPassword(account)}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                      PW 재발급
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingId === account.id}
+                      onClick={() => void deleteAccount(account)}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-zinc-400"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      삭제
+                    </button>
+                  </div>
                 ) : null}
               </div>
             ))}
@@ -405,12 +690,26 @@ export function AccountManagementPanel() {
   );
 }
 
-function SubsiteIdListSection({
-  siteAccountLists,
+function SiteCredentialListSection({
+  siteCredentialLists,
   status,
+  writable,
+  drafts,
+  deletingId,
+  updatingCredentialId,
+  onDraftChange,
+  onPasswordChange,
+  onDelete,
 }: {
-  siteAccountLists: SiteAccountList[];
+  siteCredentialLists: SiteCredentialList[];
   status: AccountState["status"];
+  writable: boolean;
+  drafts: Record<string, string>;
+  deletingId: string | null;
+  updatingCredentialId: string | null;
+  onDraftChange: (credentialId: string, value: string) => void;
+  onPasswordChange: (credential: SiteCredentialSummary) => void;
+  onDelete: (credential: SiteCredentialSummary) => void;
 }) {
   return (
     <section className="grid gap-4">
@@ -420,12 +719,12 @@ function SubsiteIdListSection({
         </span>
         <div>
           <p className="text-sm font-semibold text-emerald-700">Subsite ID List</p>
-          <h3 className="text-xl font-semibold tracking-normal text-zinc-950">서브사이트별 접근 ID</h3>
+          <h3 className="text-xl font-semibold tracking-normal text-zinc-950">서브사이트별 실제 ID</h3>
         </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {siteAccountLists.map((site) => (
+        {siteCredentialLists.map((site) => (
           <div key={site.id} className="rounded-lg border border-zinc-200 bg-white p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -438,15 +737,45 @@ function SubsiteIdListSection({
               </span>
             </div>
 
-            {site.accounts.length ? (
-              <div className="mt-4 max-h-44 space-y-2 overflow-y-auto pr-1">
-                {site.accounts.map((account) => (
-                  <div
-                    key={`${site.id}:${account.source}:${account.id ?? account.username}`}
-                    className="rounded-md border border-zinc-100 px-3 py-2"
-                  >
-                    <AccountHeading account={account} compact />
-                    {account.email ? <p className="mt-1 truncate text-xs text-zinc-500">{account.email}</p> : null}
+            {site.credentials.length ? (
+              <div className="mt-4 divide-y divide-zinc-100">
+                {site.credentials.map((credential) => (
+                  <div key={credential.id} className="grid gap-3 py-3 first:pt-0 last:pb-0">
+                    <SiteCredentialHeading credential={credential} />
+                    {credential.email || credential.label ? (
+                      <p className="truncate text-xs text-zinc-500">
+                        {[credential.email, credential.label].filter(Boolean).join(" · ")}
+                      </p>
+                    ) : null}
+                    {writable ? (
+                      <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                        <input
+                          value={drafts[credential.id] ?? ""}
+                          onChange={(event) => onDraftChange(credential.id, event.target.value)}
+                          type="password"
+                          className="h-9 min-w-0 rounded-md border border-zinc-300 px-3 text-xs outline-none focus:border-emerald-400"
+                          placeholder="새 PW 또는 자동"
+                        />
+                        <button
+                          type="button"
+                          disabled={updatingCredentialId === credential.id}
+                          onClick={() => onPasswordChange(credential)}
+                          className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:text-zinc-400"
+                        >
+                          <KeyRound className="h-3.5 w-3.5" aria-hidden />
+                          PW 변경
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deletingId === credential.id}
+                          onClick={() => onDelete(credential)}
+                          className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-zinc-400"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                          삭제
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -473,6 +802,7 @@ async function getAccountState(): Promise<AccountState> {
 
     const accounts = payload.accounts ?? [];
     const sites = payload.sites ?? [];
+    const siteCredentials = payload.siteCredentials ?? [];
     const warning = payload.portalAccountStorageError
       ? formatApiError("Portal 계정 저장소를 사용할 수 없습니다.", payload.portalAccountStorageError)
       : undefined;
@@ -482,6 +812,8 @@ async function getAccountState(): Promise<AccountState> {
       accounts,
       sites,
       siteAccountLists: payload.siteAccountLists ?? buildSiteAccountLists(sites, accounts),
+      siteCredentials,
+      siteCredentialLists: payload.siteCredentialLists ?? buildSiteCredentialLists(sites, siteCredentials),
       managedBy: payload.managedBy ?? "Vercel Environment Variables",
       writable: Boolean(payload.writable),
       warning,
@@ -492,6 +824,8 @@ async function getAccountState(): Promise<AccountState> {
       accounts: [],
       sites: [],
       siteAccountLists: [],
+      siteCredentials: [],
+      siteCredentialLists: [],
       message: error instanceof Error ? error.message : "Unknown error",
     };
   }
@@ -521,6 +855,20 @@ function buildSiteAccountLists(sites: PortalSite[], accounts: AccountSummary[]):
   });
 }
 
+function buildSiteCredentialLists(sites: PortalSite[], siteCredentials: SiteCredentialSummary[]): SiteCredentialList[] {
+  return sites.map((site) => {
+    const credentials = siteCredentials
+      .filter((credential) => credential.siteId === site.id)
+      .sort((left, right) => left.username.localeCompare(right.username));
+
+    return {
+      ...site,
+      count: credentials.length,
+      credentials,
+    };
+  });
+}
+
 function AccountHeading({ account, compact = false }: { account: SiteAccount; compact?: boolean }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -533,6 +881,21 @@ function AccountHeading({ account, compact = false }: { account: SiteAccount; co
       ) : null}
       {account.mustChangePassword ? (
         <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">PW 변경 필요</span>
+      ) : null}
+    </div>
+  );
+}
+
+function SiteCredentialHeading({ credential }: { credential: SiteCredentialSummary }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <p className="text-sm font-semibold text-zinc-950">{credential.username}</p>
+      <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600">SITE ID</span>
+      {credential.passwordConfigured ? (
+        <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">PW 저장됨</span>
+      ) : null}
+      {credential.disabled ? (
+        <span className="rounded-md bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700">비활성</span>
       ) : null}
     </div>
   );

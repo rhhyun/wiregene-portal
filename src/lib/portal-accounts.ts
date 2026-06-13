@@ -18,6 +18,12 @@ export const portalSites = [
     url: "https://www.wiregene.com/admin",
   },
   {
+    id: "omni",
+    label: "Omni Research Writing",
+    shortLabel: "Omni",
+    url: "https://omni.wiregene.com",
+  },
+  {
     id: "search",
     label: "Research Search",
     shortLabel: "Search",
@@ -71,14 +77,41 @@ export type PortalAccount = {
   updatedAt: string;
 };
 
+export type PortalSiteCredential = {
+  id: string;
+  siteId: PortalSiteId;
+  username: string;
+  email: string;
+  label: string;
+  passwordHash: string;
+  passwordUpdatedAt: string;
+  disabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type PortalAccountData = {
   accounts: PortalAccount[];
+  siteCredentials: PortalSiteCredential[];
 };
 
 export type PortalAccountSummary = Omit<PortalAccount, "passwordHash"> & {
   passwordConfigured: boolean;
   source: "PORTAL_ACCOUNTS";
 };
+
+export type PortalSiteCredentialSummary = Omit<PortalSiteCredential, "passwordHash"> & {
+  passwordConfigured: boolean;
+  source: "SITE_CREDENTIALS";
+};
+
+export type VerifiedPortalCredential =
+  | PortalAccountSummary
+  | (PortalSiteCredentialSummary & {
+      role: "user";
+      sites: PortalSiteId[];
+      mustChangePassword: false;
+    });
 
 const portalAccountStorage = createGrantJsonStorage<PortalAccountData>({
   envName: "PORTAL_ACCOUNT_STORAGE_PATH",
@@ -88,7 +121,7 @@ const portalAccountStorage = createGrantJsonStorage<PortalAccountData>({
   defaultBackend: "local-json",
   localReadOnlyMessage:
     "Portal account local storage cannot write under /var/task. Set PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive for Vercel, or run Portal on Synology with local-json storage.",
-  emptyData: () => ({ accounts: [] }),
+  emptyData: () => ({ accounts: [], siteCredentials: [] }),
   normalize: normalizePortalAccountData,
 });
 
@@ -103,8 +136,18 @@ export function portalAccountStorageWriteReadiness() {
 export async function listPortalAccountSummaries() {
   const data = await portalAccountStorage.read();
   return data.accounts
-    .map(toSummary)
+    .map(toAccountSummary)
     .sort((left, right) => left.username.localeCompare(right.username));
+}
+
+export async function listPortalSiteCredentialSummaries() {
+  const data = await portalAccountStorage.read();
+  return data.siteCredentials
+    .map(toSiteCredentialSummary)
+    .sort((left, right) => {
+      const siteComparison = left.siteId.localeCompare(right.siteId);
+      return siteComparison || left.username.localeCompare(right.username);
+    });
 }
 
 export async function createPortalAccount(input: {
@@ -141,9 +184,20 @@ export async function createPortalAccount(input: {
   await portalAccountStorage.write(data);
 
   return {
-    account: toSummary(account),
+    account: toAccountSummary(account),
     temporaryPassword,
   };
+}
+
+export async function deletePortalAccount(accountId: string) {
+  const data = await portalAccountStorage.read();
+  const nextAccounts = data.accounts.filter((account) => account.id !== accountId);
+  if (nextAccounts.length === data.accounts.length) throw new Error("Account not found.");
+
+  data.accounts = nextAccounts;
+  await portalAccountStorage.write(data);
+
+  return { deleted: true };
 }
 
 export async function resetPortalAccountPassword(accountId: string) {
@@ -159,39 +213,147 @@ export async function resetPortalAccountPassword(accountId: string) {
   await portalAccountStorage.write(data);
 
   return {
-    account: toSummary(account),
+    account: toAccountSummary(account),
     temporaryPassword,
   };
+}
+
+export async function createPortalSiteCredential(input: {
+  siteId?: string;
+  username?: string;
+  email?: string;
+  label?: string;
+  password?: string;
+}) {
+  const data = await portalAccountStorage.read();
+  const siteId = normalizeSiteId(input.siteId);
+  const username = normalizeUsername(input.username);
+  const password = normalizePasswordInput(input.password);
+  const generatedPassword = password ? undefined : generateTemporaryPassword();
+  const effectivePassword = password || generatedPassword;
+
+  if (!siteId) throw new Error("Site is required.");
+  if (!username) throw new Error("Site username is required.");
+  if (!effectivePassword) throw new Error("Password is required.");
+  if (
+    data.siteCredentials.some(
+      (credential) =>
+        credential.siteId === siteId &&
+        credential.username.toLowerCase() === username.toLowerCase(),
+    )
+  ) {
+    throw new Error(`Site credential already exists: ${siteId}/${username}`);
+  }
+
+  const now = new Date().toISOString();
+  const credential: PortalSiteCredential = {
+    id: crypto.randomUUID(),
+    siteId,
+    username,
+    email: normalizeEmail(input.email),
+    label: normalizeFreeText(input.label, 120),
+    passwordHash: await hashPassword(effectivePassword),
+    passwordUpdatedAt: now,
+    disabled: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  data.siteCredentials.push(credential);
+  await portalAccountStorage.write(data);
+
+  return {
+    siteCredential: toSiteCredentialSummary(credential),
+    temporaryPassword: generatedPassword,
+    generatedPassword: Boolean(generatedPassword),
+  };
+}
+
+export async function setPortalSiteCredentialPassword(input: {
+  siteCredentialId?: string;
+  password?: string;
+}) {
+  const data = await portalAccountStorage.read();
+  const credential = data.siteCredentials.find((candidate) => candidate.id === input.siteCredentialId);
+  if (!credential) throw new Error("Site credential not found.");
+
+  const password = normalizePasswordInput(input.password);
+  const generatedPassword = password ? undefined : generateTemporaryPassword();
+  const effectivePassword = password || generatedPassword;
+  const now = new Date().toISOString();
+
+  if (!effectivePassword) throw new Error("Password is required.");
+
+  credential.passwordHash = await hashPassword(effectivePassword);
+  credential.passwordUpdatedAt = now;
+  credential.updatedAt = now;
+
+  await portalAccountStorage.write(data);
+
+  return {
+    siteCredential: toSiteCredentialSummary(credential),
+    temporaryPassword: generatedPassword,
+    generatedPassword: Boolean(generatedPassword),
+  };
+}
+
+export async function deletePortalSiteCredential(siteCredentialId: string) {
+  const data = await portalAccountStorage.read();
+  const nextCredentials = data.siteCredentials.filter((credential) => credential.id !== siteCredentialId);
+  if (nextCredentials.length === data.siteCredentials.length) throw new Error("Site credential not found.");
+
+  data.siteCredentials = nextCredentials;
+  await portalAccountStorage.write(data);
+
+  return { deleted: true };
 }
 
 export async function verifyPortalAccountCredentials(input: {
   username: string;
   password: string;
   site: string;
-}) {
+}): Promise<VerifiedPortalCredential | null> {
   const data = await portalAccountStorage.read();
   const username = normalizeUsername(input.username);
-  const site = input.site as PortalSiteId;
+  const site = normalizeSiteId(input.site);
+  if (!site) return null;
+
   const account = data.accounts.find(
     (candidate) => candidate.username.toLowerCase() === username.toLowerCase(),
   );
 
-  if (!account || account.disabled || !account.sites.includes(site)) {
-    return null;
+  if (account && !account.disabled && account.sites.includes(site)) {
+    const verified = await verifyPassword(input.password, account.passwordHash);
+    if (verified) return toAccountSummary(account);
   }
 
-  const verified = await verifyPassword(input.password, account.passwordHash);
+  const siteCredential = data.siteCredentials.find(
+    (candidate) =>
+      candidate.siteId === site &&
+      !candidate.disabled &&
+      candidate.username.toLowerCase() === username.toLowerCase(),
+  );
+  if (!siteCredential) return null;
+
+  const verified = await verifyPassword(input.password, siteCredential.passwordHash);
   if (!verified) return null;
 
-  return toSummary(account);
+  return {
+    ...toSiteCredentialSummary(siteCredential),
+    role: "user",
+    sites: [siteCredential.siteId],
+    mustChangePassword: false,
+  };
 }
 
 function normalizePortalAccountData(value: unknown): PortalAccountData {
   const partial = typeof value === "object" && value !== null ? (value as Partial<PortalAccountData>) : {};
   const accounts = Array.isArray(partial.accounts) ? partial.accounts : [];
+  const siteCredentials = Array.isArray(partial.siteCredentials) ? partial.siteCredentials : [];
 
   return {
     accounts: accounts.flatMap((account) => normalizePortalAccount(account)),
+    siteCredentials: siteCredentials.flatMap((credential) => normalizePortalSiteCredential(credential)),
   };
 }
 
@@ -220,12 +382,48 @@ function normalizePortalAccount(value: unknown): PortalAccount[] {
   ];
 }
 
-function toSummary(account: PortalAccount): PortalAccountSummary {
+function normalizePortalSiteCredential(value: unknown): PortalSiteCredential[] {
+  if (typeof value !== "object" || value === null) return [];
+  const credential = value as Partial<PortalSiteCredential>;
+  const siteId = normalizeSiteId(credential.siteId);
+  const username = normalizeUsername(credential.username);
+  const passwordHash = typeof credential.passwordHash === "string" ? credential.passwordHash : "";
+  if (!siteId || !username || !passwordHash) return [];
+
+  const now = new Date().toISOString();
+  const updatedAt = typeof credential.updatedAt === "string" ? credential.updatedAt : now;
+  return [
+    {
+      id: typeof credential.id === "string" && credential.id ? credential.id : crypto.randomUUID(),
+      siteId,
+      username,
+      email: normalizeEmail(credential.email),
+      label: normalizeFreeText(credential.label, 120),
+      passwordHash,
+      passwordUpdatedAt:
+        typeof credential.passwordUpdatedAt === "string" ? credential.passwordUpdatedAt : updatedAt,
+      disabled: Boolean(credential.disabled),
+      createdAt: typeof credential.createdAt === "string" ? credential.createdAt : now,
+      updatedAt,
+    },
+  ];
+}
+
+function toAccountSummary(account: PortalAccount): PortalAccountSummary {
   const { passwordHash: _passwordHash, ...summary } = account;
   return {
     ...summary,
     passwordConfigured: Boolean(_passwordHash),
     source: "PORTAL_ACCOUNTS",
+  };
+}
+
+function toSiteCredentialSummary(credential: PortalSiteCredential): PortalSiteCredentialSummary {
+  const { passwordHash: _passwordHash, ...summary } = credential;
+  return {
+    ...summary,
+    passwordConfigured: Boolean(_passwordHash),
+    source: "SITE_CREDENTIALS",
   };
 }
 
@@ -236,6 +434,19 @@ function normalizeUsername(value: unknown) {
 function normalizeEmail(value: unknown) {
   const email = typeof value === "string" ? value.trim().toLowerCase() : "";
   return email.includes("@") ? email.slice(0, 160) : "";
+}
+
+function normalizePasswordInput(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+function normalizeFreeText(value: unknown, maxLength: number) {
+  return typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, maxLength) : "";
+}
+
+function normalizeSiteId(value: unknown): PortalSiteId | "" {
+  const allowed = new Set(portalSiteIds());
+  return typeof value === "string" && allowed.has(value as PortalSiteId) ? (value as PortalSiteId) : "";
 }
 
 function normalizeSites(value: unknown): PortalSiteId[] {

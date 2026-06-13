@@ -8,13 +8,18 @@ import {
 } from "@/lib/basic-auth-users";
 import { grantStorageErrorDetails } from "@/lib/grant-storage";
 import {
-  portalAccountStorageWriteReadiness,
   createPortalAccount,
+  createPortalSiteCredential,
+  deletePortalAccount,
+  deletePortalSiteCredential,
   listPortalAccountSummaries,
+  listPortalSiteCredentialSummaries,
+  portalAccountStorageWriteReadiness,
   portalSites,
-  type PortalSiteId,
   resetPortalAccountPassword,
+  setPortalSiteCredentialPassword,
   verifyPortalAccountCredentials,
+  type PortalSiteId,
 } from "@/lib/portal-accounts";
 
 export const runtime = "nodejs";
@@ -28,10 +33,14 @@ export async function GET(request: Request) {
   const environmentAccounts = getBasicAuthAccountSummaries();
   const storageWriteReadiness = portalAccountStorageWriteReadiness();
   let portalAccounts: Awaited<ReturnType<typeof listPortalAccountSummaries>> = [];
+  let siteCredentials: Awaited<ReturnType<typeof listPortalSiteCredentialSummaries>> = [];
   let portalAccountStorageError: ReturnType<typeof grantStorageErrorDetails> | undefined;
 
   try {
-    portalAccounts = await listPortalAccountSummaries();
+    [portalAccounts, siteCredentials] = await Promise.all([
+      listPortalAccountSummaries(),
+      listPortalSiteCredentialSummaries(),
+    ]);
   } catch (error) {
     portalAccountStorageError = grantStorageErrorDetails(error);
     logPortalAccountStorageError("list", error);
@@ -45,6 +54,9 @@ export async function GET(request: Request) {
       count: accounts.length,
       sites: portalSites,
       siteAccountLists: buildSiteAccountLists(accounts),
+      siteCredentials,
+      siteCredentialLists: buildSiteCredentialLists(siteCredentials),
+      siteCredentialCount: siteCredentials.length,
       managedBy: mode === "portal" ? "Portal account storage + Vercel Basic Auth" : "Vercel Environment Variables",
       writable: mode === "portal" && storageWriteReadiness.writable && !portalAccountStorageError,
       portalAccountStorageError: portalAccountStorageError ?? storageWriteReadiness.details,
@@ -66,11 +78,27 @@ export async function POST(request: Request) {
 
   try {
     const payload = (await request.json()) as {
+      kind?: "portal-account" | "site-credential";
       username?: string;
       email?: string;
       role?: "admin" | "user";
       sites?: string[];
+      siteId?: string;
+      label?: string;
+      password?: string;
     };
+
+    if (payload.kind === "site-credential") {
+      const result = await createPortalSiteCredential({
+        siteId: payload.siteId,
+        username: payload.username,
+        email: payload.email,
+        label: payload.label,
+        password: payload.password,
+      });
+      return NextResponse.json(result, { status: 201 });
+    }
+
     if (!payload.username) {
       return NextResponse.json({ error: "Username is required." }, { status: 400 });
     }
@@ -96,17 +124,55 @@ export async function PATCH(request: Request) {
   try {
     const payload = (await request.json()) as {
       accountId?: string;
-      action?: "reset-password";
+      siteCredentialId?: string;
+      action?: "reset-password" | "set-site-credential-password";
+      password?: string;
     };
 
-    if (payload.action !== "reset-password" || !payload.accountId) {
-      return NextResponse.json({ error: "Unsupported account action." }, { status: 400 });
+    if (payload.action === "reset-password" && payload.accountId) {
+      const result = await resetPortalAccountPassword(payload.accountId);
+      return NextResponse.json(result);
     }
 
-    const result = await resetPortalAccountPassword(payload.accountId);
-    return NextResponse.json(result);
+    if (payload.action === "set-site-credential-password" && payload.siteCredentialId) {
+      const result = await setPortalSiteCredentialPassword({
+        siteCredentialId: payload.siteCredentialId,
+        password: payload.password,
+      });
+      return NextResponse.json(result);
+    }
+
+    return NextResponse.json({ error: "Unsupported account action." }, { status: 400 });
   } catch (error) {
-    logPortalAccountStorageError("reset-password", error);
+    logPortalAccountStorageError("patch", error);
+    return accountErrorResponse(error);
+  }
+}
+
+export async function DELETE(request: Request) {
+  if (!isPortalMode(request)) return portalOnlyResponse();
+  if (!(await isAuthenticatedAdminRequest(request))) return authRequiredResponse();
+  const storageWriteReadiness = portalAccountStorageWriteReadiness();
+  if (!storageWriteReadiness.writable) return storageNotWritableResponse(storageWriteReadiness.details);
+
+  try {
+    const payload = (await request.json().catch(() => null)) as {
+      kind?: "portal-account" | "site-credential";
+      accountId?: string;
+      siteCredentialId?: string;
+    } | null;
+
+    if (payload?.kind === "site-credential" && payload.siteCredentialId) {
+      return NextResponse.json(await deletePortalSiteCredential(payload.siteCredentialId));
+    }
+
+    if (payload?.kind === "portal-account" && payload.accountId) {
+      return NextResponse.json(await deletePortalAccount(payload.accountId));
+    }
+
+    return NextResponse.json({ error: "Unsupported delete action." }, { status: 400 });
+  } catch (error) {
+    logPortalAccountStorageError("delete", error);
     return accountErrorResponse(error);
   }
 }
@@ -160,7 +226,7 @@ async function isAuthenticatedAdminRequest(request: Request) {
     return null;
   });
 
-  return portalAccount?.role === "admin";
+  return portalAccount?.source === "PORTAL_ACCOUNTS" && portalAccount.role === "admin";
 }
 
 function storageNotWritableResponse(details: ReturnType<typeof portalAccountStorageWriteReadiness>["details"]) {
@@ -174,6 +240,7 @@ function storageNotWritableResponse(details: ReturnType<typeof portalAccountStor
 }
 
 type AdminAccountSummary = Awaited<ReturnType<typeof listPortalAccountSummaries>>[number] | ReturnType<typeof getBasicAuthAccountSummaries>[number];
+type AdminSiteCredentialSummary = Awaited<ReturnType<typeof listPortalSiteCredentialSummaries>>[number];
 
 function buildSiteAccountLists(accounts: AdminAccountSummary[]) {
   return portalSites.map((site) => {
@@ -198,6 +265,23 @@ function buildSiteAccountLists(accounts: AdminAccountSummary[]) {
       url: site.url,
       count: siteAccounts.length,
       accounts: siteAccounts,
+    };
+  });
+}
+
+function buildSiteCredentialLists(siteCredentials: AdminSiteCredentialSummary[]) {
+  return portalSites.map((site) => {
+    const credentials = siteCredentials
+      .filter((credential) => credential.siteId === site.id)
+      .sort((left, right) => left.username.localeCompare(right.username));
+
+    return {
+      id: site.id as PortalSiteId,
+      label: site.label,
+      shortLabel: site.shortLabel,
+      url: site.url,
+      count: credentials.length,
+      credentials,
     };
   });
 }
