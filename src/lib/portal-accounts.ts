@@ -30,6 +30,12 @@ export const portalSites = [
     url: "https://omni.wiregene.com",
   },
   {
+    id: "protocol",
+    label: "Research Protocol",
+    shortLabel: "Protocol",
+    url: "https://protocol.wiregene.com",
+  },
+  {
     id: "meta",
     label: "Meta-analysis",
     shortLabel: "Meta",

@@ -3,6 +3,7 @@ import {
   BarChart3,
   BookOpenText,
   BrainCircuit,
+  FileText,
   FlaskConical,
   Globe2,
   LayoutDashboard,
@@ -27,6 +28,13 @@ const launcherSites = [
     href: "https://omni.wiregene.com/?wiregene_from=portal",
     detail: "연구와 논문 작성 통합 작업 페이지",
     icon: BookOpenText,
+  },
+  {
+    label: "Research Protocol",
+    shortLabel: "Protocol",
+    href: "https://protocol.wiregene.com/?wiregene_from=portal",
+    detail: "연구계획서, protocol, IRB 문서 작성과 관리",
+    icon: FileText,
   },
   {
     label: "Research Search",

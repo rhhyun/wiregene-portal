@@ -139,7 +139,11 @@ export function AccountManagementPanel() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
-  const [selectedSites, setSelectedSites] = useState<string[]>(["portal", "omni", "search"]);
+  const defaultUserSites = useMemo(
+    () => ["portal", "omni", "protocol", "search"].filter((siteId) => state.sites.some((site) => site.id === siteId)),
+    [state.sites],
+  );
+  const [selectedSites, setSelectedSites] = useState<string[]>(["portal", "omni", "protocol", "search"]);
   const [siteForm, setSiteForm] = useState({
     siteId: "omni",
     username: "",
@@ -192,7 +196,7 @@ export function AccountManagementPanel() {
       setUsername("");
       setEmail("");
       setRole("user");
-      setSelectedSites(["portal", "omni", "search"]);
+      setSelectedSites(defaultUserSites.length ? defaultUserSites : ["portal"]);
       setTemporaryPassword({
         label: "Portal 계정",
         username: payload.account.username,
@@ -300,7 +304,7 @@ export function AccountManagementPanel() {
       const draft = current[accountId];
       if (!draft) return current;
       const allSiteIds = state.sites.map((site) => site.id);
-      const fallbackSites = ["portal", "omni", "search"].filter((siteId) => allSiteIds.includes(siteId));
+      const fallbackSites = ["portal", "omni", "protocol", "search"].filter((siteId) => allSiteIds.includes(siteId));
       return {
         ...current,
         [accountId]: {

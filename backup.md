@@ -12,7 +12,7 @@ values in this file.
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
 - Latest known commit: 16d0197 Add copyright to version label
-- App version: Ver 1.52
+- App version: Ver 1.53
 
 ## Git Status At Generation
 
@@ -215,4 +215,9 @@ Current production route issue as of 2026-06-12:
   management. Portal login accounts now stay separate from `siteCredentials`,
   which store site-specific ID/PW hashes for create, delete, and password
   change flows without mixing different subsite passwords.
+- 2026-06-14: Added `protocol.wiregene.com` as `protocol` to the Portal
+  launcher, Portal account/site credential management list, default user site
+  selection, and environment-admin site authorization list. Existing admin
+  accounts normalize to all current Portal site IDs, so admin users include the
+  new Protocol site automatically after deployment.
 <!-- MANUAL-NOTES-END -->

@@ -19,6 +19,7 @@ export const WIREGENE_ADMIN_SITE_IDS = [
   "portal",
   "homepage-admin",
   "omni",
+  "protocol",
   "search",
   "meta",
   "hyunlab",
