@@ -341,7 +341,7 @@ choose_shared_secret() {
 
 patch_compose_file() {
   file="$1"
-  [ -f "$file" ] || return
+  [ -f "$file" ] || return 0
 
   needs_patch="false"
   if grep -q '^name: wiregene-portal$' "$file" 2>/dev/null; then
@@ -350,7 +350,7 @@ patch_compose_file() {
   if ! grep -q '^version:' "$file" 2>/dev/null; then
     needs_patch="true"
   fi
-  [ "$needs_patch" = "true" ] || return
+  [ "$needs_patch" = "true" ] || return 0
 
   cp -p "$file" "$file.bak.$(date '+%Y%m%d%H%M%S')" 2>/dev/null || true
   sed -i '/^name: wiregene-portal$/d' "$file"
@@ -421,7 +421,7 @@ add_arim_professor_account() {
 }
 
 restart_known_services() {
-  [ "$AUTO_START" = "true" ] || return
+  [ "$AUTO_START" = "true" ] || return 0
 
   if [ -f "$PORTAL_SOURCE_DIR/scripts/synology-update-portal.sh" ]; then
     /bin/sh "$PORTAL_SOURCE_DIR/scripts/synology-update-portal.sh"

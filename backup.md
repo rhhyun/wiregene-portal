@@ -11,8 +11,8 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known upstream commit before this update: 2068fe1 Add protocol site to portal
-- App version: Ver 1.54
+- Latest known upstream commit before this update: 555f5be Automate Synology portal identity setup
+- App version: Ver 1.55
 
 ## Git Status At Generation
 
@@ -256,4 +256,14 @@ Current production route issue as of 2026-06-12:
   `scripts/synology-web-start.sh` now forwards `APP_BASIC_AUTH_USERS`,
   `APP_ADMIN_USER`, `PORTAL_AUTH_CHECK_SECRET`, `WIREGENE_AUTH_CHECK_SECRET`,
   and `PORTAL_AUTH_CHECK_URL` into Docker containers.
+- 2026-06-19: NAS log showing only
+  `Wiregene identity auto-configuration started` and
+  `Updating portal source checkout at /volume1/docker/wiregene-portal` exposed
+  a shell `set -e` bug in `scripts/synology-auto-wiregene-identity.sh`.
+  `patch_compose_file` returned a non-zero status when a compose file was
+  already compatible or missing, so the script exited before configuring env
+  files. Fixed by returning `0` for those normal no-op cases, and also for
+  the normal `AUTO_START=false` no-op restart path.
+- 2026-06-19: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.54` to `Ver 1.55` for the identity-script no-op return fix.
 <!-- MANUAL-NOTES-END -->
