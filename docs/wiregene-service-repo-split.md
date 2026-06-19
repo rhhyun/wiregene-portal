@@ -140,7 +140,7 @@ Start separated services:
 
 ```sh
 /bin/sh /volume1/docker/wiregene-meta-analysis/scripts/synology-start-meta.sh
-/bin/sh /volume1/docker/wiregene-portal/scripts/synology-start-portal.sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh
 ```
 
 Runtime `.env` defaults now point to separated source folders:

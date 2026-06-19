@@ -13,6 +13,33 @@ again.
 
 The default service listens on host port `3002`.
 
+## Automatic Identity Setup
+
+Use this when `rhhyun` must be added without manually editing every `.env`:
+
+```sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
+```
+
+The script keeps existing `wiregene` credentials, adds `rhhyun` to
+`APP_BASIC_AUTH_USERS`, marks `rhhyun` as an admin, shares
+`PORTAL_AUTH_CHECK_SECRET` / `WIREGENE_AUTH_CHECK_SECRET` with known subsite
+`.env` files, and restarts the Portal plus known compose runtimes when
+`AUTO_START=true`.
+
+If no existing password can be reused, it writes the generated initial password
+only to:
+
+```text
+/volume1/docker/portal/rhhyun-initial-password.txt
+```
+
+The log is:
+
+```text
+/volume1/docker/portal/logs/identity-auto-config.log
+```
+
 ## DSM Task Scheduler
 
 Use this single command for manual or scheduled updates:

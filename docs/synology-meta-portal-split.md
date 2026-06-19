@@ -51,7 +51,7 @@ meta.wiregene.com -> NAS_IP:3001
 ## Portal Service
 
 ```sh
-/bin/sh /volume1/docker/wiregene-portal/scripts/synology-start-portal.sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh
 ```
 
 On the first run, fill `/volume1/docker/portal/.env`, then run the same command
@@ -84,14 +84,14 @@ tasks for the two Docker services. The combined DSM Task Scheduler command is:
 
 ```text
 /bin/sh /volume1/docker/wiregene-meta-analysis/scripts/synology-start-meta.sh
-/bin/sh /volume1/docker/wiregene-portal/scripts/synology-start-portal.sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh
 ```
 
 Separate DSM Task Scheduler commands are also available:
 
 ```sh
 /bin/sh /volume1/docker/wiregene-meta-analysis/scripts/synology-start-meta.sh
-/bin/sh /volume1/docker/wiregene-portal/scripts/synology-start-portal.sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh
 ```
 
 On the first run, each script creates `/volume1/docker/meta/.env` or
@@ -107,7 +107,8 @@ the password. Run the migration helper instead:
 /bin/sh /volume1/docker/research-briefing-platform/scripts/synology-migrate-auth-env.sh
 /bin/sh /volume1/docker/research-briefing-platform/scripts/synology-bootstrap-service-repos.sh
 /bin/sh /volume1/docker/wiregene-meta-analysis/scripts/synology-start-meta.sh
-/bin/sh /volume1/docker/wiregene-portal/scripts/synology-start-portal.sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
 ```
 
 The helper fills only missing auth/admin keys in `/volume1/docker/meta/.env`
@@ -165,7 +166,9 @@ fi
 git -C "$APP_DIR" pull --ff-only origin main
 /bin/sh "$APP_DIR/scripts/synology-bootstrap-service-repos.sh" &&
 /bin/sh /volume1/docker/wiregene-meta-analysis/scripts/synology-start-meta.sh &&
-/bin/sh /volume1/docker/wiregene-portal/scripts/synology-start-portal.sh &&
+cd /volume1/docker/wiregene-portal &&
+git pull --ff-only origin main &&
+/bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh &&
 /bin/sh "$APP_DIR/scripts/synology-write-backup-md.sh"
 ```
 

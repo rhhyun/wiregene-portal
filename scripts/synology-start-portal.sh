@@ -27,6 +27,25 @@ compose() {
   fi
 }
 
+compose_runtime() {
+  if docker compose version >/dev/null 2>&1; then
+    docker compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" "$@"
+    return
+  fi
+
+  if command -v docker-compose >/dev/null 2>&1; then
+    if docker-compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" "$@"; then
+      return
+    fi
+
+    log "docker-compose rejected --env-file or failed with absolute runtime paths; retrying from $RUNTIME_DIR without --env-file."
+    (cd "$RUNTIME_DIR" && docker-compose -f docker-compose.yml "$@")
+    return
+  fi
+
+  fail "Docker Compose was not found. Install Synology Container Manager or docker-compose."
+}
+
 log_docker_versions() {
   docker --version 2>/dev/null | while IFS= read -r line; do
     log "$line"
@@ -44,14 +63,14 @@ log_docker_versions() {
 }
 
 validate_compose_config() {
-  if ! compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" config >/dev/null; then
+  if ! compose_runtime config >/dev/null; then
     fail "Docker Compose could not read $RUNTIME_DIR/docker-compose.yml. The runtime copy has been refreshed from $PACKAGE_DIR; check the Compose error above."
   fi
 }
 
 build_app() {
   log "Installing dependencies and building Wiregene Portal before service restart."
-  compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" run --rm --no-deps portal sh -lc '
+  compose_runtime run --rm --no-deps portal sh -lc '
     set -eu
     node -v
     npm -v
@@ -122,7 +141,7 @@ main() {
   validate_compose_config
   build_app
   log "Starting Wiregene Portal from $RUNTIME_DIR."
-  compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" up -d --force-recreate
+  compose_runtime up -d --force-recreate
   log "Wiregene Portal start requested. Check logs with: docker logs wiregene-portal"
 }
 

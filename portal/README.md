@@ -39,10 +39,16 @@ synology/docker/portal
 The Docker package mounts the shared source directory and starts the same app
 with `WIREGENE_APP_MODE=portal`.
 
-DSM Task Scheduler boot-time command:
+DSM Task Scheduler boot-time/update command:
 
 ```text
-/bin/sh /volume1/docker/wiregene-portal/scripts/synology-start-portal.sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh
+```
+
+Automatic identity setup for `rhhyun`:
+
+```text
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
 ```
 
 ## Boundary Rules

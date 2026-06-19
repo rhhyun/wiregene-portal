@@ -220,7 +220,8 @@ main() {
   log "If no admin key was found, set WIREGENE_ADMIN_EMAILS manually or rerun with AUTH_FALLBACK_ADMIN_FROM_USER=true."
   log "Next: /bin/sh $APP_DIR/scripts/synology-bootstrap-service-repos.sh"
   log "Next: /bin/sh /volume1/docker/wiregene-meta-analysis/scripts/synology-start-meta.sh"
-  log "Next: /bin/sh /volume1/docker/wiregene-portal/scripts/synology-start-portal.sh"
+  log "Next: cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh"
+  log "Optional identity sync: cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh"
 }
 
 main "$@"

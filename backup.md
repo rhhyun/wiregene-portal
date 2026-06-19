@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-13 21:02:57 +0900
+Generated: 2026-06-19 00:00:00 +0900
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,8 +11,8 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: 16d0197 Add copyright to version label
-- App version: Ver 1.53
+- Latest known upstream commit before this update: 2068fe1 Add protocol site to portal
+- App version: Ver 1.54
 
 ## Git Status At Generation
 
@@ -71,6 +71,12 @@ git -C "$APP_DIR" pull --ff-only origin main
 /bin/sh "$APP_DIR/scripts/synology-update-portal.sh"
 ```
 
+One-time or on-demand automatic identity setup:
+
+```sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
+```
+
 The Synology backup writer updates this file locally. To make the updated
 handoff visible on other PCs, commit and push `backup.md` from a trusted
 development machine after reviewing it.
@@ -83,6 +89,8 @@ development machine after reviewing it.
 - `docs/synology-meta-portal-split.md`: transition NAS layout and scheduler notes.
 - `scripts/synology-update-portal.sh`: full Synology update, build, restart,
   local health check, version check, and public route check.
+- `scripts/synology-auto-wiregene-identity.sh`: automatic `rhhyun` identity,
+  admin, shared auth secret, known subsite env sync, and restart helper.
 - `scripts/synology-start-portal.sh`: Synology container build/restart helper.
 - `synology/docker/portal/.env.example`: runtime environment template.
 - `src/lib/version.ts`: visible application version.
@@ -220,4 +228,32 @@ Current production route issue as of 2026-06-12:
   selection, and environment-admin site authorization list. Existing admin
   accounts normalize to all current Portal site IDs, so admin users include the
   new Protocol site automatically after deployment.
+- 2026-06-19: The failed NAS message
+  `/bin/sh: /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh: No such file or directory`
+  meant the automation script had been written locally but had not yet been
+  committed and pushed to GitHub, so Synology `git pull` could not download it.
+- 2026-06-19: Added `scripts/synology-auto-wiregene-identity.sh`. It clones or
+  updates `/volume1/docker/wiregene-portal`, creates `/volume1/docker/portal/.env`
+  if missing, preserves existing `wiregene` credentials, adds `rhhyun` to
+  `APP_BASIC_AUTH_USERS`, adds `rhhyun` to `WIREGENE_ADMIN_EMAILS`, syncs
+  `PORTAL_AUTH_CHECK_SECRET`, `WIREGENE_AUTH_CHECK_SECRET`, and
+  `PORTAL_AUTH_CHECK_URL` to known subsite `.env` files, adds `rhhyun` to
+  `ARIM_PROFESSOR_ACCOUNTS` when an ARIM env file is found, and restarts Portal
+  plus known compose runtimes when `AUTO_START=true`.
+- 2026-06-19: If no existing `rhhyun` or `wiregene` password can be reused, the
+  identity script generates an initial password and stores it only at
+  `/volume1/docker/portal/rhhyun-initial-password.txt`; secrets and passwords
+  are not printed to logs.
+- 2026-06-19: DSM Task Scheduler update command remains:
+  `cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh`
+- 2026-06-19: DSM one-time/on-demand identity command is:
+  `cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh`
+- 2026-06-19: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.53` to `Ver 1.54` for the automatic identity setup change.
+- 2026-06-19: Synology Docker fallback was hardened. `scripts/synology-start-portal.sh`
+  now retries config/build/up from `/volume1/docker/portal` without
+  `--env-file` when older `docker-compose` rejects that flag, and
+  `scripts/synology-web-start.sh` now forwards `APP_BASIC_AUTH_USERS`,
+  `APP_ADMIN_USER`, `PORTAL_AUTH_CHECK_SECRET`, `WIREGENE_AUTH_CHECK_SECRET`,
+  and `PORTAL_AUTH_CHECK_URL` into Docker containers.
 <!-- MANUAL-NOTES-END -->

@@ -118,6 +118,12 @@ git -C "\$APP_DIR" pull --ff-only origin main
 /bin/sh "\$APP_DIR/scripts/synology-update-portal.sh"
 \`\`\`
 
+One-time or on-demand automatic identity setup:
+
+\`\`\`sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
+\`\`\`
+
 The Synology backup writer updates this file locally. To make the updated
 handoff visible on other PCs, commit and push \`backup.md\` from a trusted
 development machine after reviewing it.
@@ -130,6 +136,8 @@ development machine after reviewing it.
 - \`docs/synology-meta-portal-split.md\`: transition NAS layout and scheduler notes.
 - \`scripts/synology-update-portal.sh\`: full Synology update, build, restart,
   local health check, version check, and public route check.
+- \`scripts/synology-auto-wiregene-identity.sh\`: automatic identity/admin/shared
+  auth secret setup for Portal and known subsite env files.
 - \`scripts/synology-start-portal.sh\`: Synology container build/restart helper.
 - \`synology/docker/portal/.env.example\`: runtime environment template.
 - \`src/lib/version.ts\`: visible application version.
