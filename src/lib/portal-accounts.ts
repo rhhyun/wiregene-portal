@@ -127,7 +127,13 @@ const portalAccountStorage = createGrantJsonStorage<PortalAccountData>({
   backendEnvNames: ["PORTAL_ACCOUNT_STORAGE_BACKEND"],
   defaultBackend: "local-json",
   localReadOnlyMessage:
-    "Portal account local storage cannot write under /var/task. Set PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive for Vercel, or run Portal on Synology with local-json storage.",
+    "Portal account local storage cannot write under /var/task. Production ID/PW storage must run on Synology with local-json; Google Drive should be configured as a backup mirror, not the long-term Vercel primary store.",
+  googleDriveBackup: {
+    enabledEnvName: "PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP",
+    fileNameEnvName: "PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP_FILENAME",
+    fileIdEnvName: "PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP_FILE_ID",
+    defaultFileName: "portal-accounts.synology-backup.json",
+  },
   emptyData: () => ({ accounts: [], siteCredentials: [] }),
   normalize: normalizePortalAccountData,
 });
@@ -138,6 +144,10 @@ export function portalSiteIds() {
 
 export function portalAccountStorageWriteReadiness() {
   return portalAccountStorage.writeReadiness();
+}
+
+export async function backupPortalAccountStorageToGoogleDrive() {
+  return portalAccountStorage.backupNow();
 }
 
 export async function listPortalAccountSummaries() {

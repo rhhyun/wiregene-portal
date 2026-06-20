@@ -123,9 +123,9 @@ __STATUS__
   break-glass/bootstrap access.
 - Portal account ID storage is intended to run on Synology with
   `PORTAL_ACCOUNT_STORAGE_BACKEND=local-json`.
-- If `portal.wiregene.com` is served by Vercel, account storage must use
-  `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive` with a valid Google OAuth
-  Client ID/Secret/Refresh Token set on the Vercel project.
+- Google Drive is a backup mirror only, enabled with
+  `PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP=true`. Vercel is emergency/temporary
+  access and must not be the long-term ID/PW source of truth.
 - The Synology update script checks local container readiness, rendered version,
   and whether the public portal host is still returning Vercel headers. The
   public route check warns by default and only fails when
@@ -196,8 +196,8 @@ development machine after reviewing it.
 - On Synology, syntax-check shell scripts with `sh -n scripts/<name>.sh`.
 - If public Portal is intended to run from Synology, confirm
   `portal.wiregene.com` does not return `Server: Vercel` or `X-Vercel-Id`
-  headers. If public Portal is intentionally Vercel, keep
-  `PUBLIC_PORTAL_ROUTE_POLICY=warn` and verify Google Drive OAuth storage.
+  headers. Keep Vercel only as emergency/temporary access; production ID/PW
+  storage belongs on Synology local JSON with Google Drive backup mirroring.
 
 ## Manual Handoff Notes
 

@@ -102,6 +102,9 @@ REPORT_STORAGE_BACKEND=local-json
 REPORT_STORAGE_LOCAL_PATH=.data/portal/research-briefing-storage.json
 PORTAL_ACCOUNT_STORAGE_BACKEND=local-json
 PORTAL_ACCOUNT_STORAGE_PATH=.data/portal/portal-accounts.json
+PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP=false
+PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP_FILENAME=portal-accounts.synology-backup.json
+PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP_FILE_ID=
 
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5-nano
@@ -152,6 +155,17 @@ write_env_value() {
 
   mv "$tmp" "$file"
   chmod 600 "$file" 2>/dev/null || true
+}
+
+ensure_env_value() {
+  file="$1"
+  key="$2"
+  value="$3"
+  current=$(read_env_value "$file" "$key")
+  if [ -n "$current" ]; then
+    return
+  fi
+  write_env_value "$file" "$key" "$value"
 }
 
 append_csv_value() {
@@ -391,6 +405,8 @@ configure_env_file() {
       write_env_value "$file" "REPORT_STORAGE_LOCAL_PATH" ".data/portal/research-briefing-storage.json"
       write_env_value "$file" "PORTAL_ACCOUNT_STORAGE_BACKEND" "local-json"
       write_env_value "$file" "PORTAL_ACCOUNT_STORAGE_PATH" ".data/portal/portal-accounts.json"
+      ensure_env_value "$file" "PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP" "false"
+      ensure_env_value "$file" "PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP_FILENAME" "portal-accounts.synology-backup.json"
       ;;
   esac
 

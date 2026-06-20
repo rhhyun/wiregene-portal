@@ -14,6 +14,12 @@ type GrantJsonStorageOptions<T> = {
   backendEnvNames?: readonly string[];
   defaultBackend?: string;
   localReadOnlyMessage?: string;
+  googleDriveBackup?: {
+    enabledEnvName: string;
+    fileNameEnvName?: string;
+    fileIdEnvName?: string;
+    defaultFileName: string;
+  };
   emptyData: () => T;
   normalize: (value: unknown) => T;
 };
@@ -28,6 +34,13 @@ type GrantStorageErrorDetails = {
   cause?: string;
   backupPath?: string;
   runtime?: string;
+};
+
+type GrantStorageBackupStatus = {
+  enabled: boolean;
+  backend?: "google-drive";
+  path?: string;
+  message?: string;
 };
 
 export class GrantStorageError extends Error {
@@ -63,6 +76,41 @@ function grantStorageBackend(options: Pick<GrantJsonStorageOptions<unknown>, "ba
 
 function isGoogleDriveGrantStorage(options: GrantJsonStorageOptions<unknown>) {
   return grantStorageBackend(options) === "google-drive";
+}
+
+function isGoogleDriveBackupEnabled(options: GrantJsonStorageOptions<unknown>) {
+  const envName = options.googleDriveBackup?.enabledEnvName;
+  if (!envName) return false;
+
+  const value = process.env[envName]?.trim().toLowerCase() ?? "";
+  return ["1", "true", "yes", "on", "google-drive"].includes(value);
+}
+
+function googleDriveBackupFileName(options: GrantJsonStorageOptions<unknown>) {
+  const configured = options.googleDriveBackup?.fileNameEnvName
+    ? process.env[options.googleDriveBackup.fileNameEnvName]?.trim()
+    : "";
+  return configured || options.googleDriveBackup?.defaultFileName || "";
+}
+
+function googleDriveBackupFileId(options: GrantJsonStorageOptions<unknown>) {
+  return options.googleDriveBackup?.fileIdEnvName
+    ? process.env[options.googleDriveBackup.fileIdEnvName]?.trim() ?? ""
+    : "";
+}
+
+function googleDriveBackupStatus(options: GrantJsonStorageOptions<unknown>): GrantStorageBackupStatus | undefined {
+  if (!options.googleDriveBackup) return undefined;
+  if (!isGoogleDriveBackupEnabled(options)) return { enabled: false };
+
+  const fileName = googleDriveBackupFileName(options);
+  return {
+    enabled: true,
+    backend: "google-drive",
+    path: fileName ? `google-drive:${fileName}` : undefined,
+    message:
+      "Primary storage remains local JSON. Google Drive is used only as a backup mirror after successful local writes.",
+  };
 }
 
 function grantDriveFileName(envName: string, defaultRelativePath: string) {
@@ -134,6 +182,7 @@ export function createGrantJsonStorage<T>(options: GrantJsonStorageOptions<T>) {
         backend,
         path: storagePath,
         runtime,
+        backup: googleDriveBackupStatus(options),
         details: undefined,
       };
     },
@@ -188,6 +237,16 @@ export function createGrantJsonStorage<T>(options: GrantJsonStorageOptions<T>) {
         await fs.unlink(temporaryPath).catch(() => undefined);
         throw storageError(error, options.label, "write", targetPath, {}, options);
       }
+
+      await mirrorLocalJsonToGoogleDrive(options, data).catch((error) => {
+        console.warn(`${options.label} Google Drive backup mirror failed`, {
+          details: grantStorageErrorDetails(error),
+        });
+      });
+    },
+    async backupNow() {
+      const data = await this.read();
+      return mirrorLocalJsonToGoogleDrive(options, data, { required: true });
     },
   };
 }
@@ -274,6 +333,43 @@ async function moveCorruptJsonAside(
       backupPath,
     }, options);
   }
+}
+
+async function mirrorLocalJsonToGoogleDrive<T>(
+  options: GrantJsonStorageOptions<T>,
+  data: T,
+  mirrorOptions: { required?: boolean } = {},
+) {
+  if (!options.googleDriveBackup || !isGoogleDriveBackupEnabled(options)) {
+    if (mirrorOptions.required) {
+      throw new GrantStorageError(`${options.label} Google Drive backup is not enabled.`, {
+        label: options.label,
+        operation: "backup",
+        path: storageLocation(options),
+        backend: grantStorageBackend(options),
+        code: "GOOGLE_DRIVE_BACKUP_DISABLED",
+        message: `Set ${options.googleDriveBackup?.enabledEnvName ?? "the backup env"}=true to enable Google Drive backup mirroring.`,
+      });
+    }
+
+    return { ok: false, skipped: true, reason: "disabled" as const };
+  }
+
+  const fileName = googleDriveBackupFileName(options);
+  const fileId = googleDriveBackupFileId(options);
+  if (!fileName) {
+    throw new GrantStorageError(`${options.label} Google Drive backup filename is missing.`, {
+      label: options.label,
+      operation: "backup",
+      path: "google-drive:",
+      backend: "google-drive",
+      code: "GOOGLE_DRIVE_BACKUP_FILENAME_MISSING",
+      message: "Set a Google Drive backup filename or defaultFileName.",
+    });
+  }
+
+  await writeGoogleDriveData(options.label, fileName, JSON.stringify(data, null, 2), fileId);
+  return { ok: true, backend: "google-drive" as const, path: `google-drive:${fileName}` };
 }
 
 function storageError(

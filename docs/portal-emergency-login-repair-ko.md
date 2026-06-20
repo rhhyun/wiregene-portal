@@ -34,4 +34,4 @@ npm.cmd run vercel:repair-portal-login -- -Redeploy
 
 - 이 작업은 `wiregene-portal` Vercel project의 production env만 수정합니다.
 - 기존 Vercel sensitive env 값은 다시 읽을 수 없으므로 기존 `APP_BASIC_AUTH_USERS`에 append하지 않고 응급 계정 목록을 새로 설정합니다.
-- Portal 화면에 들어간 뒤 Google Drive 저장소 오류가 남아 있으면 `docs/portal-google-drive-oauth-repair-ko.md` 절차로 별도 복구합니다.
+- Portal 화면에 들어간 뒤 저장소 오류가 남아 있으면 장기 운영 원칙인 Synology local-json 원본 + Google Drive 백업 미러로 전환합니다. 세부 절차는 `docs/portal-synology-primary-google-drive-backup-ko.md`를 따릅니다.

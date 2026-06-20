@@ -137,7 +137,9 @@ GitHub Actions에서 성공하면 Google Drive의 `research-briefing-database.js
 
 `Google OAuth refresh failed: invalid_grant`:
 
-`GOOGLE_DRIVE_REFRESH_TOKEN`이 만료되었거나 다른 OAuth client 값과 섞였습니다. Portal 계정 저장소 오류라면 일반 `google-drive:oauth`가 아니라 Portal 전용 절차를 사용합니다.
+`GOOGLE_DRIVE_REFRESH_TOKEN`이 만료되었거나 다른 OAuth client 값과 섞였습니다. Portal ID/PW 장기 운영은 Vercel Google Drive 원본이 아니라 Synology local-json 원본 + Google Drive 백업 미러를 사용합니다.
+
+운영 원칙은 `docs/portal-synology-primary-google-drive-backup-ko.md`를 따릅니다. Vercel에서 임시로 Portal 저장소를 돌려야 하는 경우에만 아래 응급 절차를 사용합니다.
 
 ```powershell
 cd C:\Users\rhhyu\Documents\Portal.wiregene.com

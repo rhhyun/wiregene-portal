@@ -20,6 +20,7 @@
     "vercel:portal-google-drive": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/vercel-configure-portal-google-drive.ps1",
     "vercel:repair-portal-login": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/repair-portal-login-env.ps1",
     "vercel:repair-portal-google-drive": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/repair-portal-google-drive-oauth.ps1",
+    "portal:backup-google-drive": "tsx scripts/backup-portal-accounts-google-drive.ts",
     "check:zotero-config": "node scripts/check-zotero-config.mjs",
     "zotero:whoami": "node scripts/zotero-whoami.mjs"
   },

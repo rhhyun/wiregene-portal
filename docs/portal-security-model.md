@@ -70,8 +70,11 @@ Cross-site account-management requests are rejected.
   `APP_ADMIN_USERS`, or `APP_ADMIN_USER`.
 - `PORTAL_AUTH_CHECK_SECRET` / `WIREGENE_AUTH_CHECK_SECRET` is set and shared
   only with trusted subsites.
-- Vercel deployments use `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive` with a
-  valid OAuth client/secret/refresh token pair.
-- Synology deployments use local JSON storage under `/volume1/docker/portal`.
+- Production identity storage should run from Synology with
+  `PORTAL_ACCOUNT_STORAGE_BACKEND=local-json`.
+- Google Drive is a backup mirror only when
+  `PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP=true`.
+- Vercel deployments are emergency/temporary access only. They should not be
+  the long-term source of truth for Portal ID/PW records.
 - Run `npm.cmd run lint -- --max-warnings=0`, `npx.cmd tsc --noEmit --pretty
   false`, and `npm.cmd run build` before deployment.

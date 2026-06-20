@@ -30,9 +30,9 @@ Env-like paths and backup.md are intentionally omitted from this section.
   break-glass/bootstrap access.
 - Portal account ID storage is intended to run on Synology with
   `PORTAL_ACCOUNT_STORAGE_BACKEND=local-json`.
-- If `portal.wiregene.com` is served by Vercel, account storage must use
-  `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive` with a valid Google OAuth
-  Client ID/Secret/Refresh Token set on the Vercel project.
+- Google Drive is a backup mirror only, enabled with
+  `PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP=true`. Vercel is emergency/temporary
+  access and must not be the long-term ID/PW source of truth.
 - The Synology update script checks local container readiness, rendered version,
   and whether the public portal host is still returning Vercel headers. The
   public route check warns by default and only fails when
@@ -113,11 +113,10 @@ Current production route issue as of 2026-06-12:
 
 - `portal.wiregene.com` resolves to `76.76.21.21`, and HTTP headers show
   `Server: Vercel` plus `X-Vercel-Id`.
-- Browser account creation is therefore hitting Vercel, not Synology. If Vercel
-  is the intended public host, Portal account storage must be Google Drive with
-  valid OAuth values on the Vercel project. If Synology is the intended public
-  host, move DNS/reverse proxy to Synology before expecting browser writes to use
-  Synology local JSON.
+- Browser account creation is therefore hitting Vercel, not Synology. For the
+  intended production model, move DNS/reverse proxy to Synology before expecting
+  browser writes to use Synology local JSON. Keep Vercel only as emergency
+  access while routing is being corrected.
 - Do not remove the Vercel alias before Synology routing is ready, or the public
   domain may break instead of moving to the NAS.
 - Required external fixes:
@@ -313,4 +312,27 @@ Current production route issue as of 2026-06-12:
   which is already ignored by Git.
 - 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
   from `Ver 1.59` to `Ver 1.60` for the Portal emergency login repair tooling.
+- 2026-06-20: Adopted the Portal ID/PW storage principle requested by the user:
+  Synology local JSON is the production source of truth, and Google Drive is a
+  backup mirror only. Vercel remains emergency/temporary access and must not be
+  treated as the long-term account store.
+- 2026-06-20: Added Google Drive backup mirroring for local JSON writes through
+  `PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP=true`,
+  `PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP_FILENAME`, and optional
+  `PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP_FILE_ID`. Local Synology writes complete
+  first; Google Drive backup failures are logged but do not block ID/PW writes.
+- 2026-06-20: Added `npm run portal:backup-google-drive` and
+  `scripts/backup-portal-accounts-google-drive.ts` for manual or scheduled
+  backup of `/volume1/docker/portal/data/portal-accounts.json` to Google Drive.
+- 2026-06-20: Added
+  `scripts/synology-backup-portal-accounts-google-drive.sh` so DSM Task
+  Scheduler can run the Google Drive backup through the existing Synology
+  Docker Compose runtime and older `docker-compose` fallback.
+- 2026-06-20: Added
+  `docs/portal-synology-primary-google-drive-backup-ko.md` and updated Portal
+  security/error guidance so Vercel Google Drive primary storage is documented
+  as emergency-only.
+- 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.60` to `Ver 1.61` for the Synology-primary Google Drive-backup
+  storage model.
 <!-- MANUAL-NOTES-END -->

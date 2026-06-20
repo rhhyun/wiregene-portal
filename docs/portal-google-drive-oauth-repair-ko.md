@@ -1,4 +1,6 @@
-# Portal Google Drive OAuth 복구 절차
+# Portal Google Drive OAuth 응급 복구 절차
+
+장기 운영 원칙은 Synology local JSON을 ID/PW 원본으로 쓰고 Google Drive는 백업 미러로 두는 것입니다. 이 문서는 `portal.wiregene.com`이 임시로 Vercel에서 Google Drive를 원본 저장소로 사용할 때만 적용합니다.
 
 `portal.wiregene.com`에서 아래 오류가 보이면 저장소 코드는 이미 Google Drive 백엔드까지 도달한 상태입니다.
 
@@ -14,6 +16,7 @@ Google OAuth refresh failed: invalid_grant
 - Portal 복구에는 Google Cloud Console에서 확인한 정확한 OAuth Client ID와 Client Secret, 그리고 그 둘로 새로 발급한 Portal Refresh Token이 필요합니다.
 - 다른 서브사이트가 마비되는 경우는 주로 다른 사이트의 Vercel/GitHub env를 덮어쓰거나, Google 계정에서 OAuth 앱 접근을 취소하거나, OAuth client 자체를 삭제했을 때입니다.
 - Portal 복구 스크립트는 `wiregene-portal` Vercel project만 수정합니다. Search/Meta env는 건드리지 않습니다.
+- 장기 운영은 `docs/portal-synology-primary-google-drive-backup-ko.md`를 따릅니다.
 
 ## 1. Portal Refresh Token 발급
 
