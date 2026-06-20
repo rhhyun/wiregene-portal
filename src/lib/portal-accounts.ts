@@ -4,6 +4,7 @@ import { createGrantJsonStorage } from "./grant-storage";
 
 const scrypt = promisify(crypto.scrypt);
 const manualSitePasswordMinimumLength = 12;
+const sharedSearchOnlyPortalUsernames = new Set(["wiregene"]);
 
 export const portalSites = [
   {
@@ -183,13 +184,13 @@ export async function createPortalAccount(input: {
 
   const now = new Date().toISOString();
   const temporaryPassword = generateTemporaryPassword();
-  const role = input.role === "admin" ? "admin" : "user";
+  const role = normalizeAccountRole(username, input.role);
   const account: PortalAccount = {
     id: crypto.randomUUID(),
     username,
     email: normalizeEmail(input.email),
     role,
-    sites: role === "admin" ? portalSiteIds() : normalizeSites(input.sites),
+    sites: normalizeAccountSites(username, role, input.sites),
     passwordHash: await hashPassword(temporaryPassword),
     mustChangePassword: true,
     disabled: false,
@@ -258,11 +259,11 @@ export async function updatePortalAccount(input: {
     throw new Error(`Account already exists: ${username}`);
   }
 
-  const role = input.role === "admin" || input.role === "user" ? input.role : account.role;
+  const role = normalizeAccountRole(username, input.role ?? account.role);
   account.username = username;
   account.email = normalizeEmail(input.email ?? account.email);
   account.role = role;
-  account.sites = role === "admin" ? portalSiteIds() : normalizeSites(input.sites ?? account.sites);
+  account.sites = normalizeAccountSites(username, role, input.sites ?? account.sites);
   account.disabled = typeof input.disabled === "boolean" ? input.disabled : account.disabled;
   account.updatedAt = new Date().toISOString();
 
@@ -422,14 +423,14 @@ function normalizePortalAccount(value: unknown): PortalAccount[] {
   if (!username || !passwordHash) return [];
 
   const now = new Date().toISOString();
-  const role = account.role === "admin" ? "admin" : "user";
+  const role = normalizeAccountRole(username, account.role);
   return [
     {
       id: typeof account.id === "string" && account.id ? account.id : crypto.randomUUID(),
       username,
       email: normalizeEmail(account.email),
       role,
-      sites: role === "admin" ? portalSiteIds() : normalizeSites(account.sites),
+      sites: normalizeAccountSites(username, role, account.sites),
       passwordHash,
       mustChangePassword: Boolean(account.mustChangePassword),
       disabled: Boolean(account.disabled),
@@ -491,6 +492,16 @@ function normalizeUsername(value: unknown) {
 function normalizeEmail(value: unknown) {
   const email = typeof value === "string" ? value.trim().toLowerCase() : "";
   return email.includes("@") ? email.slice(0, 160) : "";
+}
+
+function normalizeAccountRole(username: string, role: unknown): PortalRole {
+  if (sharedSearchOnlyPortalUsernames.has(username.toLowerCase())) return "user";
+  return role === "admin" ? "admin" : "user";
+}
+
+function normalizeAccountSites(username: string, role: PortalRole, sites: unknown): PortalSiteId[] {
+  if (sharedSearchOnlyPortalUsernames.has(username.toLowerCase())) return ["search"];
+  return role === "admin" ? portalSiteIds() : normalizeSites(sites);
 }
 
 function normalizePasswordInput(value: unknown) {

@@ -342,10 +342,14 @@ Current production route issue as of 2026-06-12:
   full site access only when explicitly listed as admins; otherwise
   `APP_BASIC_AUTH_SITE_ACCESS` controls their site list, and `wiregene`
   defaults to `search` only. Portal also ignores `wiregene` in admin env
-  variables so older deployments cannot accidentally promote it again.
+  variables and normalizes any Portal account named `wiregene` to user/search
+  only so older deployments cannot accidentally promote it again.
 - 2026-06-20: Updated Vercel emergency login repair so it sets only `rhhyun` as
   a Portal admin, sets `wiregene=search`, and treats `wiregene` access to
   `portal.wiregene.com` as a failed verification.
 - 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
   from `Ver 1.61` to `Ver 1.62` for the search-only `wiregene` scope fix.
+- 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.62` to `Ver 1.63` after extending the same search-only
+  `wiregene` rule to Portal account storage normalization.
 <!-- MANUAL-NOTES-END -->
