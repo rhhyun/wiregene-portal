@@ -5,14 +5,12 @@ import {
   Building2,
   ClipboardCheck,
   ClipboardList,
-  ExternalLink,
   FileSearch,
   FileText,
   Globe2,
   GraduationCap,
   LogOut,
   Menu,
-  Network,
   ShieldCheck,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -28,11 +26,6 @@ export type WorkspaceView =
   | "candidate-board"
   | "thesis-management";
 
-type ExternalWorkspaceLink = {
-  label: string;
-  detail: string;
-  href: string;
-};
 
 export function ResearchWorkspaceShell({
   briefingPanel,
@@ -42,7 +35,6 @@ export function ResearchWorkspaceShell({
   traineeFellowshipPanel,
   candidatePanel,
   thesisManagementPanel,
-  externalLinks,
   initialView,
   currentUser,
   versionLabel,
@@ -54,7 +46,6 @@ export function ResearchWorkspaceShell({
   traineeFellowshipPanel: ReactNode;
   candidatePanel: ReactNode;
   thesisManagementPanel: ReactNode;
-  externalLinks: ExternalWorkspaceLink[];
   initialView?: WorkspaceView;
   currentUser?: CurrentWiregeneUser | null;
   versionLabel: string;
@@ -162,18 +153,6 @@ export function ResearchWorkspaceShell({
               onClick={() => selectView("thesis-management")}
             />
 
-            {externalLinks.length ? (
-              <div className="mt-2 border-t border-zinc-200 pt-3">
-                <p className="px-3 pb-2 text-xs font-semibold uppercase text-zinc-500">
-                  Linked platforms
-                </p>
-                <div className="grid gap-2">
-                  {externalLinks.map((link) => (
-                    <ExternalNavLink key={link.href} link={link} />
-                  ))}
-                </div>
-              </div>
-            ) : null}
           </nav>
         </aside>
 
@@ -255,21 +234,5 @@ function WorkspaceNavButton({
         <span className="mt-0.5 block text-xs text-zinc-500">{detail}</span>
       </span>
     </button>
-  );
-}
-
-function ExternalNavLink({ link }: { link: ExternalWorkspaceLink }) {
-  return (
-    <a
-      href={link.href}
-      className="grid w-full grid-cols-[24px_1fr_16px] items-start gap-3 rounded-md border border-transparent bg-white px-3 py-3 text-left text-zinc-700 transition hover:border-zinc-200 hover:bg-zinc-50"
-    >
-      <Network className="mt-0.5 h-4 w-4 text-zinc-500" aria-hidden />
-      <span>
-        <span className="block text-sm font-semibold">{link.label}</span>
-        <span className="mt-0.5 block text-xs text-zinc-500">{link.detail}</span>
-      </span>
-      <ExternalLink className="mt-0.5 h-3.5 w-3.5 text-zinc-400" aria-hidden />
-    </a>
   );
 }

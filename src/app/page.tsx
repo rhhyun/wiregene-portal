@@ -31,18 +31,6 @@ const workspaceViews: WorkspaceView[] = [
   "thesis-management",
 ];
 
-const externalLinks = [
-  {
-    label: "Meta-analysis",
-    detail: "PRISMA, screening, extraction",
-    href: "https://meta.wiregene.com/?wiregene_from=search",
-  },
-  {
-    label: "Portal",
-    detail: "ID management, platform login",
-    href: "https://portal.wiregene.com/?wiregene_from=search",
-  },
-];
 
 type DashboardState =
   | {
@@ -115,7 +103,6 @@ export default async function Home({
       traineeFellowshipPanel={<GovernmentGrantPanel topics={topics} sourceGroup="trainee-fellowship" />}
       candidatePanel={<GrantCandidateBoard />}
       thesisManagementPanel={<ThesisManagementPanel />}
-      externalLinks={externalLinks}
     />
   );
 }

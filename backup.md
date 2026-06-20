@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-19 00:00:00 +0900
+Generated: 2026-06-20 12:22:05 +0900
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,8 +11,8 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known upstream commit before this update: 555f5be Automate Synology portal identity setup
-- App version: Ver 1.55
+- Latest known commit: d77bc7f Remove cross-site sidebar links
+- App version: Ver 1.56
 
 ## Git Status At Generation
 
@@ -89,8 +89,8 @@ development machine after reviewing it.
 - `docs/synology-meta-portal-split.md`: transition NAS layout and scheduler notes.
 - `scripts/synology-update-portal.sh`: full Synology update, build, restart,
   local health check, version check, and public route check.
-- `scripts/synology-auto-wiregene-identity.sh`: automatic `rhhyun` identity,
-  admin, shared auth secret, known subsite env sync, and restart helper.
+- `scripts/synology-auto-wiregene-identity.sh`: automatic identity/admin/shared
+  auth secret setup for Portal and known subsite env files.
 - `scripts/synology-start-portal.sh`: Synology container build/restart helper.
 - `synology/docker/portal/.env.example`: runtime environment template.
 - `src/lib/version.ts`: visible application version.
