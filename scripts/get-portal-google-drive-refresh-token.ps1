@@ -27,6 +27,8 @@ Set-Location $appDir
 $previousClientId = $env:GOOGLE_DRIVE_CLIENT_ID
 $previousClientSecret = $env:GOOGLE_DRIVE_CLIENT_SECRET
 $previousScopes = $env:GOOGLE_DRIVE_OAUTH_SCOPES
+$previousOauthPort = $env:GOOGLE_DRIVE_OAUTH_PORT
+$previousOauthHost = $env:GOOGLE_DRIVE_OAUTH_HOST
 
 try {
   $env:GOOGLE_DRIVE_CLIENT_ID = Read-RequiredSecret `
@@ -36,8 +38,12 @@ try {
     -Name "GOOGLE_DRIVE_CLIENT_SECRET" `
     -Prompt "Paste Portal GOOGLE_DRIVE_CLIENT_SECRET"
   $env:GOOGLE_DRIVE_OAUTH_SCOPES = "https://www.googleapis.com/auth/drive.file"
+  $env:GOOGLE_DRIVE_OAUTH_HOST = "127.0.0.1"
+  $env:GOOGLE_DRIVE_OAUTH_PORT = "53682"
 
   Write-Host "Starting Portal Google Drive refresh token flow. Secret values will not be printed by this wrapper."
+  Write-Host "Before opening the URL, Google Cloud Console must include this Authorized redirect URI:"
+  Write-Host "http://127.0.0.1:53682/oauth2callback"
   Write-Host "The OAuth script will print a browser URL. Open it, approve access, then copy the generated GOOGLE_DRIVE_REFRESH_TOKEN from this terminal."
   npm.cmd run google-drive:oauth
   if ($LASTEXITCODE -ne 0) {
@@ -47,4 +53,6 @@ try {
   $env:GOOGLE_DRIVE_CLIENT_ID = $previousClientId
   $env:GOOGLE_DRIVE_CLIENT_SECRET = $previousClientSecret
   $env:GOOGLE_DRIVE_OAUTH_SCOPES = $previousScopes
+  $env:GOOGLE_DRIVE_OAUTH_PORT = $previousOauthPort
+  $env:GOOGLE_DRIVE_OAUTH_HOST = $previousOauthHost
 }

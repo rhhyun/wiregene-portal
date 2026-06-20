@@ -357,4 +357,10 @@ Current production route issue as of 2026-06-12:
 - 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
   from `Ver 1.63` to `Ver 1.64` after enforcing search-only `wiregene` access
   even when `APP_BASIC_AUTH_SITE_ACCESS` is misconfigured broadly.
+- 2026-06-20: Fixed the Portal Google Drive OAuth helper for
+  `redirect_uri_mismatch`. `npm.cmd run google-drive:oauth:portal` now uses the
+  fixed loopback redirect URI
+  `http://127.0.0.1:53682/oauth2callback` and prints the exact URI that must be
+  added to the Google Cloud Console OAuth Client when the client type is
+  `Web application`.
 <!-- MANUAL-NOTES-END -->

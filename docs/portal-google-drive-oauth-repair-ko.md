@@ -35,6 +35,14 @@ Paste Portal GOOGLE_DRIVE_CLIENT_ID
 Paste Portal GOOGLE_DRIVE_CLIENT_SECRET
 ```
 
+Google 승인 화면에서 `400 오류: redirect_uri_mismatch`가 나오면, 같은 OAuth Client의 Google Cloud Console 설정에 아래 값을 Authorized redirect URI로 정확히 추가합니다.
+
+```text
+http://127.0.0.1:53682/oauth2callback
+```
+
+`http`, `127.0.0.1`, 포트 `53682`, `/oauth2callback`까지 모두 정확히 일치해야 합니다. OAuth Client 종류가 `Web application`이면 이 값이 반드시 등록되어 있어야 하고, `Desktop app`이면 일반적으로 loopback redirect가 허용됩니다.
+
 터미널에 Google 승인 URL이 표시되면 브라우저에서 열어 승인합니다. 승인이 끝나면 터미널에 `GOOGLE_DRIVE_REFRESH_TOKEN`이 출력됩니다.
 
 ## 2. Vercel production env 반영

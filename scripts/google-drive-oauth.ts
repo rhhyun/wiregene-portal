@@ -11,6 +11,9 @@ const googleOauthScopes = (
 );
 const authUrl = "https://accounts.google.com/o/oauth2/v2/auth";
 const tokenUrl = "https://oauth2.googleapis.com/token";
+const oauthHost = process.env.GOOGLE_DRIVE_OAUTH_HOST?.trim() || "127.0.0.1";
+const requestedOauthPort = Number.parseInt(process.env.GOOGLE_DRIVE_OAUTH_PORT ?? "", 10);
+const oauthPort = Number.isInteger(requestedOauthPort) && requestedOauthPort > 0 ? requestedOauthPort : 0;
 
 const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID ?? "";
 const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET ?? "";
@@ -91,16 +94,35 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
-server.listen(0, "127.0.0.1", () => {
+server.on("error", (error: NodeJS.ErrnoException) => {
+  if (error.code === "EADDRINUSE" && oauthPort > 0) {
+    console.error(
+      [
+        `OAuth callback port ${oauthPort} is already in use.`,
+        "Close the process using that port or set GOOGLE_DRIVE_OAUTH_PORT to another fixed port.",
+        "If you change the port, add the matching redirect URI in Google Cloud Console first.",
+      ].join("\n"),
+    );
+    process.exit(1);
+  }
+
+  throw error;
+});
+
+server.listen(oauthPort, oauthHost, () => {
   const address = server.address() as AddressInfo;
+  const callbackUrl = redirectUri(address.port);
   const url = new URL(authUrl);
   url.searchParams.set("client_id", clientId);
-  url.searchParams.set("redirect_uri", redirectUri(address.port));
+  url.searchParams.set("redirect_uri", callbackUrl);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", googleOauthScopes);
   url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "consent");
 
+  console.log("Google Cloud Console Authorized redirect URI must exactly match:");
+  console.log(callbackUrl);
+  console.log("");
   console.log("Open this URL in your browser, sign in, and approve Google Drive access:");
   console.log(url.toString());
   console.log("\nWaiting for OAuth callback...");
@@ -109,5 +131,5 @@ server.listen(0, "127.0.0.1", () => {
 function redirectUri(port?: number) {
   const address = server.address();
   const actualPort = port ?? (address && typeof address !== "string" ? address.port : 0);
-  return `http://127.0.0.1:${actualPort}/oauth2callback`;
+  return `http://${oauthHost}:${actualPort}/oauth2callback`;
 }
