@@ -94,6 +94,7 @@ WIREGENE_APP_MODE=portal
 APP_BASIC_AUTH_USER=
 APP_BASIC_AUTH_PASSWORD=
 APP_BASIC_AUTH_USERS=
+APP_BASIC_AUTH_SITE_ACCESS=wiregene=search
 WIREGENE_ADMIN_EMAILS=
 PORTAL_AUTH_CHECK_SECRET=
 WIREGENE_SUBSITE_ACCOUNTS=
@@ -182,6 +183,38 @@ append_csv_value() {
     write_env_value "$file" "$key" "$current,$value"
   else
     write_env_value "$file" "$key" "$value"
+  fi
+}
+
+remove_csv_value() {
+  file="$1"
+  key="$2"
+  value="$3"
+  current=$(read_env_value "$file" "$key")
+
+  if [ -z "$current" ]; then
+    return
+  fi
+
+  value_lc=$(printf "%s" "$value" | tr '[:upper:]' '[:lower:]')
+  updated=$(printf "%s" "$current" | tr ',' '\n' | awk -v drop="$value_lc" '
+    {
+      clean = $0
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", clean)
+      lower = tolower(clean)
+      if (clean != "" && lower != drop) {
+        if (out != "") {
+          out = out "," clean
+        } else {
+          out = clean
+        }
+      }
+    }
+    END { print out }
+  ')
+
+  if [ "$updated" != "$current" ]; then
+    write_env_value "$file" "$key" "$updated"
   fi
 }
 
@@ -387,6 +420,10 @@ configure_env_file() {
   cp -p "$file" "$file.bak.$(date '+%Y%m%d%H%M%S')" 2>/dev/null || true
 
   add_auth_user "$file" "$IDENTITY_USERNAME" "$identity_password"
+  ensure_env_value "$file" "APP_BASIC_AUTH_SITE_ACCESS" "${REFERENCE_USERNAME}=search"
+  remove_csv_value "$file" "WIREGENE_ADMIN_EMAILS" "$REFERENCE_USERNAME"
+  remove_csv_value "$file" "APP_ADMIN_USERS" "$REFERENCE_USERNAME"
+  remove_csv_value "$file" "APP_ADMIN_USER" "$REFERENCE_USERNAME"
   append_csv_value "$file" "WIREGENE_ADMIN_EMAILS" "$IDENTITY_USERNAME"
   write_env_value "$file" "PORTAL_AUTH_CHECK_SECRET" "$shared_secret"
   write_env_value "$file" "WIREGENE_AUTH_CHECK_SECRET" "$shared_secret"

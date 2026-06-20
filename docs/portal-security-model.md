@@ -10,7 +10,9 @@ Portal supports two identity sources.
 - Environment Basic Auth:
   `APP_BASIC_AUTH_USER`, `APP_BASIC_AUTH_PASSWORD`, and `APP_BASIC_AUTH_USERS`
   are bootstrap and break-glass credentials. They can sign in to protected
-  Wiregene sites, but they are not automatically Portal administrators.
+  Wiregene sites, but they are not automatically Portal administrators. Non-admin
+  environment users are limited by `APP_BASIC_AUTH_SITE_ACCESS`; the shared
+  `wiregene` account defaults to `search` only.
 - Portal account storage:
   Accounts stored in `portal-accounts.json` are the normal managed Portal
   accounts. They have explicit role, site access, disabled state, password hash,
@@ -25,6 +27,12 @@ A user can administer Portal only when one of these is true:
   `WIREGENE_ADMIN_EMAILS`, `APP_ADMIN_USERS`, or `APP_ADMIN_USER`
 
 Do not treat every valid Basic Auth credential as an administrator.
+
+Do not grant the shared `wiregene` account full administration. It may remain
+available for `search.wiregene.com` only. Portal ignores `wiregene` in admin
+environment variables even if an old deployment still contains it there. All
+other subsites should use their own Portal-managed ID/PW records, and those
+passwords should be rotated before being used operationally.
 
 ## Subsite Login Rule
 
@@ -66,6 +74,8 @@ Cross-site account-management requests are rejected.
 ## Deployment Checklist
 
 - `APP_BASIC_AUTH_USERS` contains emergency accounts only.
+- `APP_BASIC_AUTH_SITE_ACCESS=wiregene=search` is set unless a narrower
+  emergency policy is intentionally chosen.
 - `rhhyun` or another admin is listed in `WIREGENE_ADMIN_EMAILS`,
   `APP_ADMIN_USERS`, or `APP_ADMIN_USER`.
 - `PORTAL_AUTH_CHECK_SECRET` / `WIREGENE_AUTH_CHECK_SECRET` is set and shared

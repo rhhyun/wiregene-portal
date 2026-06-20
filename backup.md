@@ -305,8 +305,10 @@ Current production route issue as of 2026-06-12:
   Synology `.env` changes would not restore browser access. Added
   `scripts/repair-portal-login-env.ps1` and
   `npm run vercel:repair-portal-login` to reset Vercel production
-  `APP_BASIC_AUTH_USERS` for `rhhyun` and `wiregene`, list both as admins,
-  redeploy production, and verify Basic Auth without printing the password.
+  `APP_BASIC_AUTH_USERS` for `rhhyun` and `wiregene`, list only `rhhyun` as
+  admin, set `APP_BASIC_AUTH_SITE_ACCESS=wiregene=search`, redeploy
+  production, verify `rhhyun` can enter Portal, and verify `wiregene` cannot
+  enter Portal.
 - 2026-06-20: Added `docs/portal-emergency-login-repair-ko.md`. Generated
   emergency passwords are written only to `.codex-logs/portal-emergency-login-*.txt`,
   which is already ignored by Git.
@@ -335,4 +337,15 @@ Current production route issue as of 2026-06-12:
 - 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
   from `Ver 1.60` to `Ver 1.61` for the Synology-primary Google Drive-backup
   storage model.
+- 2026-06-20: Removed full Portal administrator scope from the shared
+  `wiregene` environment credential. Environment Basic Auth users now receive
+  full site access only when explicitly listed as admins; otherwise
+  `APP_BASIC_AUTH_SITE_ACCESS` controls their site list, and `wiregene`
+  defaults to `search` only. Portal also ignores `wiregene` in admin env
+  variables so older deployments cannot accidentally promote it again.
+- 2026-06-20: Updated Vercel emergency login repair so it sets only `rhhyun` as
+  a Portal admin, sets `wiregene=search`, and treats `wiregene` access to
+  `portal.wiregene.com` as a failed verification.
+- 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.61` to `Ver 1.62` for the search-only `wiregene` scope fix.
 <!-- MANUAL-NOTES-END -->

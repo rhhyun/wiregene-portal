@@ -30,6 +30,16 @@ export const WIREGENE_ADMIN_SITE_IDS = [
   "human",
 ];
 
+const WIREGENE_SITE_ID_SET = new Set(WIREGENE_ADMIN_SITE_IDS);
+const WIREGENE_SITE_ID_ALIASES: Record<string, string> = {
+  arim: "human",
+  homepage: "homepage-admin",
+  "www-admin": "homepage-admin",
+  "www.wiregene.com/admin": "homepage-admin",
+  "sci-bbb": "behavior",
+};
+const RESERVED_NON_ADMIN_USERNAMES = new Set(["wiregene"]);
+
 export function getBasicAuthCredentialsFromEnv(env: BasicAuthEnv = process.env) {
   const credentials: BasicAuthCredential[] = [];
   const username = normalizeAuthEnvValue(env.APP_BASIC_AUTH_USER);
@@ -49,16 +59,22 @@ export function getBasicAuthCredentialsFromEnv(env: BasicAuthEnv = process.env) 
 
 export function getBasicAuthAccountSummaries(env: BasicAuthEnv = process.env) {
   const adminUsernames = getAdminUsernamesFromEnv(env);
+  const siteAccess = getBasicAuthSiteAccessFromEnv(env);
 
-  return getBasicAuthCredentialsFromEnv(env).map(
-    (credential): BasicAuthAccountSummary => ({
+  return getBasicAuthCredentialsFromEnv(env).map((credential): BasicAuthAccountSummary => {
+    const normalizedUsername = normalizeAuthUsername(credential.username);
+    const isAdmin = adminUsernames.has(normalizedUsername);
+
+    return {
       username: credential.username,
       source: credential.source,
       passwordConfigured: Boolean(credential.password),
-      role: adminUsernames.has(normalizeAuthUsername(credential.username)) ? "admin" : "user",
-      sites: WIREGENE_ADMIN_SITE_IDS,
-    }),
-  );
+      role: isAdmin ? "admin" : "user",
+      sites: isAdmin
+        ? WIREGENE_ADMIN_SITE_IDS
+        : (siteAccess.get(normalizedUsername) ?? defaultBasicAuthSitesForUsername(normalizedUsername)),
+    };
+  });
 }
 
 export function findBasicAuthAccountForCredential(
@@ -92,8 +108,12 @@ export function getAdminUsernamesFromEnv(env: BasicAuthEnv = process.env) {
         normalizeAuthEnvValue(env.APP_ADMIN_USERS),
         normalizeAuthEnvValue(env.APP_ADMIN_USER),
       ].join(","),
-    ),
+    ).filter((username) => !RESERVED_NON_ADMIN_USERNAMES.has(username)),
   );
+}
+
+export function getBasicAuthSiteAccessFromEnv(env: BasicAuthEnv = process.env) {
+  return parseBasicAuthSiteAccess(normalizeAuthEnvValue(env.APP_BASIC_AUTH_SITE_ACCESS));
 }
 
 export function isAdminUsername(username: string, env: BasicAuthEnv = process.env) {
@@ -164,6 +184,43 @@ function parseAdminUsers(value: string | undefined): string[] {
     .split(",")
     .map((entry) => normalizeAuthUsername(entry))
     .filter(Boolean);
+}
+
+function defaultBasicAuthSitesForUsername(normalizedUsername: string) {
+  if (normalizedUsername === "wiregene") return ["search"];
+  return ["portal"];
+}
+
+function parseBasicAuthSiteAccess(value: string | undefined) {
+  const siteAccess = new Map<string, string[]>();
+  if (!value) return siteAccess;
+
+  for (const entry of value.split(",")) {
+    const separatorIndex = entry.indexOf("=");
+    if (separatorIndex <= 0) continue;
+
+    const username = normalizeAuthUsername(entry.slice(0, separatorIndex));
+    const sites = Array.from(
+      new Set(
+        entry
+          .slice(separatorIndex + 1)
+          .split(/[|;\s]+/)
+          .map(normalizeSiteId)
+          .filter((site) => WIREGENE_SITE_ID_SET.has(site)),
+      ),
+    );
+
+    if (username && sites.length > 0) {
+      siteAccess.set(username, sites);
+    }
+  }
+
+  return siteAccess;
+}
+
+function normalizeSiteId(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return WIREGENE_SITE_ID_ALIASES[normalized] ?? normalized;
 }
 
 function timingSafeStringEqual(expected: string, provided: string) {

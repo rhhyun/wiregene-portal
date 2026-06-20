@@ -137,7 +137,8 @@ development machine after reviewing it.
 - \`scripts/synology-update-portal.sh\`: full Synology update, build, restart,
   local health check, version check, and public route check.
 - \`scripts/synology-auto-wiregene-identity.sh\`: automatic identity/admin/shared
-  auth secret setup for Portal and known subsite env files.
+  auth secret setup for Portal and known subsite env files, with \`wiregene\`
+  scoped to \`search\` unless explicitly changed.
 - \`scripts/synology-start-portal.sh\`: Synology container build/restart helper.
 - \`synology/docker/portal/.env.example\`: runtime environment template.
 - \`src/lib/version.ts\`: visible application version.

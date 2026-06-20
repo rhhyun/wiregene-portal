@@ -21,8 +21,8 @@ Use this when `rhhyun` must be added without manually editing every `.env`:
 cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
 ```
 
-The script keeps existing `wiregene` credentials, adds `rhhyun` to
-`APP_BASIC_AUTH_USERS`, marks `rhhyun` as an admin, shares
+The script keeps existing `wiregene` credentials scoped to `search`, adds
+`rhhyun` to `APP_BASIC_AUTH_USERS`, marks `rhhyun` as an admin, shares
 `PORTAL_AUTH_CHECK_SECRET` / `WIREGENE_AUTH_CHECK_SECRET` with known subsite
 `.env` files, and restarts the Portal plus known compose runtimes when
 `AUTO_START=true`.

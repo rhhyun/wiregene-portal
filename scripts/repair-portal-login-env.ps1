@@ -3,7 +3,9 @@ param(
   [string]$Project = "wiregene-portal",
   [ValidateSet("production", "preview", "development")]
   [string]$Environment = "production",
-  [string[]]$Usernames = @("rhhyun", "wiregene"),
+  [string[]]$AdminUsernames = @("rhhyun"),
+  [string[]]$ScopedUsernames = @("wiregene"),
+  [string]$ScopedSites = "search",
   [string]$Password,
   [switch]$GeneratePassword,
   [switch]$Redeploy,
@@ -68,6 +70,8 @@ function Write-GeneratedCredentialFile {
   param(
     [string]$AppDir,
     [string[]]$LoginUsers,
+    [string[]]$AdminUsers,
+    [string]$ScopedAccess,
     [string]$LoginPassword
   )
 
@@ -81,8 +85,11 @@ function Write-GeneratedCredentialFile {
     "GeneratedAt=$(Get-Date -Format o)",
     "URL=https://portal.wiregene.com",
     "Users=$($LoginUsers -join ',')",
+    "PortalAdmins=$($AdminUsers -join ',')",
+    "ScopedAccess=$ScopedAccess",
     "Password=$LoginPassword",
     "",
+    "Security rule: rhhyun is the Portal admin; wiregene is search-only unless APP_BASIC_AUTH_SITE_ACCESS is changed.",
     "After login, rotate this password from Vercel env or rerun this script."
   )
 
@@ -128,13 +135,67 @@ function Test-PortalLogin {
   throw "Portal Basic Auth verification did not succeed after redeploy."
 }
 
+function Test-PortalDenied {
+  param(
+    [string]$Username,
+    [string]$LoginPassword
+  )
+
+  $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("${Username}:${LoginPassword}"))
+  $headers = @{ Authorization = "Basic $encoded" }
+
+  for ($attempt = 1; $attempt -le 12; $attempt++) {
+    try {
+      $response = Invoke-WebRequest `
+        -Uri "https://portal.wiregene.com/" `
+        -Headers $headers `
+        -UseBasicParsing `
+        -TimeoutSec 30
+
+      if ([int]$response.StatusCode -eq 401) {
+        Write-Host "Portal negative verification succeeded for $Username."
+        return
+      }
+
+      if ([int]$response.StatusCode -eq 200) {
+        throw "Portal still allowed $Username to access portal.wiregene.com."
+      }
+
+      Write-Host "Portal negative verification returned HTTP $([int]$response.StatusCode). Retry $attempt/12."
+    } catch [System.Net.WebException] {
+      $webResponse = $_.Exception.Response
+      if ($webResponse -and [int]$webResponse.StatusCode -eq 401) {
+        Write-Host "Portal negative verification succeeded for $Username."
+        return
+      }
+
+      if ($webResponse) {
+        Write-Host "Portal negative verification returned HTTP $([int]$webResponse.StatusCode). Retry $attempt/12."
+      } else {
+        Write-Host "Portal negative verification failed: $($_.Exception.Message). Retry $attempt/12."
+      }
+    }
+
+    Start-Sleep -Seconds 10
+  }
+
+  throw "Portal negative verification did not return HTTP 401 for $Username after redeploy."
+}
+
 $appDir = Split-Path -Parent $PSScriptRoot
 Set-Location $appDir
 
-$loginUsers = $Usernames |
+$adminUsersList = @($AdminUsernames |
   ForEach-Object { $_.Trim() } |
   Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
-  Select-Object -Unique
+  Select-Object -Unique)
+
+$scopedUsersList = @($ScopedUsernames |
+  ForEach-Object { $_.Trim() } |
+  Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+  Select-Object -Unique)
+
+$loginUsers = @($adminUsersList + $scopedUsersList | Select-Object -Unique)
 
 if ($loginUsers.Count -eq 0) {
   throw "At least one login username is required."
@@ -144,6 +205,15 @@ foreach ($username in $loginUsers) {
   if ($username -match "[:,\s]") {
     throw "Username '$username' cannot contain colon, comma, or whitespace."
   }
+}
+
+$scopedSiteList = @($ScopedSites -split "[|,;\s]+" |
+  ForEach-Object { $_.Trim().ToLowerInvariant() } |
+  Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+  Select-Object -Unique)
+
+if ($scopedUsersList.Count -gt 0 -and $scopedSiteList.Count -eq 0) {
+  throw "At least one scoped site is required when ScopedUsernames is set."
 }
 
 $passwordValue = $Password
@@ -162,13 +232,16 @@ if ($passwordValue.Length -lt 16) {
 }
 
 $authUsers = ($loginUsers | ForEach-Object { "${_}:$passwordValue" }) -join ","
-$adminUsers = $loginUsers -join ","
+$adminUsers = $adminUsersList -join ","
+$scopedAccess = ($scopedUsersList | ForEach-Object { "${_}=$($scopedSiteList -join '|')" }) -join ","
 $credentialFile = ""
 
 if ($GeneratePassword) {
   $credentialFile = Write-GeneratedCredentialFile `
     -AppDir $appDir `
     -LoginUsers $loginUsers `
+    -AdminUsers $adminUsersList `
+    -ScopedAccess $scopedAccess `
     -LoginPassword $passwordValue
 }
 
@@ -184,6 +257,8 @@ $envValues = [ordered]@{
   APP_BASIC_AUTH_USERS = $authUsers
   WIREGENE_ADMIN_EMAILS = $adminUsers
   APP_ADMIN_USERS = $adminUsers
+  APP_ADMIN_USER = $adminUsers
+  APP_BASIC_AUTH_SITE_ACCESS = $scopedAccess
 }
 
 foreach ($entry in $envValues.GetEnumerator()) {
@@ -207,5 +282,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if (-not $SkipVerify) {
-  Test-PortalLogin -Username $loginUsers[0] -LoginPassword $passwordValue
+  if ($adminUsersList.Count -gt 0) {
+    Test-PortalLogin -Username $adminUsersList[0] -LoginPassword $passwordValue
+  }
+
+  if ($scopedUsersList.Count -gt 0) {
+    Test-PortalDenied -Username $scopedUsersList[0] -LoginPassword $passwordValue
+  }
 }
