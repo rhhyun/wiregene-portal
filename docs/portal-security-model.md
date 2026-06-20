@@ -12,7 +12,7 @@ Portal supports two identity sources.
   are bootstrap and break-glass credentials. They can sign in to protected
   Wiregene sites, but they are not automatically Portal administrators. Non-admin
   environment users are limited by `APP_BASIC_AUTH_SITE_ACCESS`; the shared
-  `wiregene` account defaults to `search` only.
+  `wiregene` account is forced to `search` only.
 - Portal account storage:
   Accounts stored in `portal-accounts.json` are the normal managed Portal
   accounts. They have explicit role, site access, disabled state, password hash,
@@ -32,9 +32,10 @@ Do not grant the shared `wiregene` account full administration. It may remain
 available for `search.wiregene.com` only. Portal ignores `wiregene` in admin
 environment variables and normalizes any Portal account named `wiregene` to
 `role=user` with `sites=["search"]`, even if old storage or an old deployment
-contains broader permissions. All other subsites should use their own
-Portal-managed ID/PW records, and those passwords should be rotated before
-being used operationally.
+contains broader permissions. It also ignores broader
+`APP_BASIC_AUTH_SITE_ACCESS` values for `wiregene`. All other subsites should
+use their own Portal-managed ID/PW records, and those passwords should be
+rotated before being used operationally.
 
 ## Subsite Login Rule
 

@@ -72,7 +72,7 @@ export function getBasicAuthAccountSummaries(env: BasicAuthEnv = process.env) {
       role: isAdmin ? "admin" : "user",
       sites: isAdmin
         ? WIREGENE_ADMIN_SITE_IDS
-        : (siteAccess.get(normalizedUsername) ?? defaultBasicAuthSitesForUsername(normalizedUsername)),
+        : basicAuthSitesForUsername(normalizedUsername, siteAccess.get(normalizedUsername)),
     };
   });
 }
@@ -186,9 +186,9 @@ function parseAdminUsers(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
-function defaultBasicAuthSitesForUsername(normalizedUsername: string) {
+function basicAuthSitesForUsername(normalizedUsername: string, configuredSites?: string[]) {
   if (normalizedUsername === "wiregene") return ["search"];
-  return ["portal"];
+  return configuredSites ?? ["portal"];
 }
 
 function parseBasicAuthSiteAccess(value: string | undefined) {
