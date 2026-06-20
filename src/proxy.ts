@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { appModeLabel, getWiregeneAppMode } from "@/lib/app-mode";
 import {
+  findBasicAuthAccountForCredential,
   getBasicAuthCredentialsFromEnv,
   normalizeAuthEnvValue,
   parseBasicAuthCredential,
@@ -30,15 +31,11 @@ export async function proxy(request: NextRequest) {
 
   const credentials = getBasicAuthCredentials();
   const providedCredential = parseBasicAuthCredential(request.headers.get("authorization") ?? "");
+  const environmentAccount = providedCredential
+    ? findBasicAuthAccountForCredential(providedCredential)
+    : null;
 
-  if (
-    providedCredential &&
-    credentials.some(
-      (credential) =>
-        credential.username === providedCredential.username &&
-        credential.password === providedCredential.password,
-    )
-  ) {
+  if (environmentAccount?.sites.includes(mode)) {
     return NextResponse.next();
   }
 

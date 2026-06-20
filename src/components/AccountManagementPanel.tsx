@@ -643,7 +643,7 @@ export function AccountManagementPanel() {
                   onChange={(event) => setSiteForm((current) => ({ ...current, password: event.target.value }))}
                   type="password"
                   className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
-                  placeholder="비우면 자동 발급"
+                  placeholder="12자 이상 또는 자동"
                 />
               </label>
             </div>
@@ -990,7 +990,7 @@ function SiteCredentialListSection({
                           onChange={(event) => onDraftChange(credential.id, event.target.value)}
                           type="password"
                           className="h-9 min-w-0 rounded-md border border-zinc-300 px-3 text-xs outline-none focus:border-emerald-400"
-                          placeholder="새 PW 또는 자동"
+                          placeholder="12자 이상 또는 자동"
                         />
                         <button
                           type="button"

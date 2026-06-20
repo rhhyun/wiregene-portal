@@ -3,6 +3,7 @@ import { promisify } from "util";
 import { createGrantJsonStorage } from "./grant-storage";
 
 const scrypt = promisify(crypto.scrypt);
+const manualSitePasswordMinimumLength = 12;
 
 export const portalSites = [
   {
@@ -273,6 +274,7 @@ export async function createPortalSiteCredential(input: {
   const siteId = normalizeSiteId(input.siteId);
   const username = normalizeUsername(input.username);
   const password = normalizePasswordInput(input.password);
+  assertManualSitePasswordPolicy(password);
   const generatedPassword = password ? undefined : generateTemporaryPassword();
   const effectivePassword = password || generatedPassword;
 
@@ -322,6 +324,7 @@ export async function setPortalSiteCredentialPassword(input: {
   if (!credential) throw new Error("Site credential not found.");
 
   const password = normalizePasswordInput(input.password);
+  assertManualSitePasswordPolicy(password);
   const generatedPassword = password ? undefined : generateTemporaryPassword();
   const effectivePassword = password || generatedPassword;
   const now = new Date().toISOString();
@@ -482,6 +485,18 @@ function normalizeEmail(value: unknown) {
 
 function normalizePasswordInput(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function assertManualSitePasswordPolicy(password: string) {
+  if (!password) return;
+  if (password.length < manualSitePasswordMinimumLength) {
+    throw new Error(
+      `Manual site passwords must be at least ${manualSitePasswordMinimumLength} characters. Leave PW blank to generate a strong password automatically.`,
+    );
+  }
+  if (password.trim() !== password || /[\r\n]/.test(password)) {
+    throw new Error("Manual site passwords cannot start/end with whitespace or include line breaks.");
+  }
 }
 
 function normalizeFreeText(value: unknown, maxLength: number) {

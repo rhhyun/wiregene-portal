@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import { getWiregeneAppMode } from "@/lib/app-mode";
 import {
+  findBasicAuthAccountForCredential,
   getBasicAuthAccountSummaries,
-  getBasicAuthCredentialsFromEnv,
   parseBasicAuthCredential,
 } from "@/lib/basic-auth-users";
 import { grantStorageErrorDetails } from "@/lib/grant-storage";
@@ -74,6 +74,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   if (!isPortalMode(request)) return portalOnlyResponse();
   if (!(await isAuthenticatedAdminRequest(request))) return authRequiredResponse();
+  if (!isTrustedMutationRequest(request)) return untrustedMutationResponse();
   const storageWriteReadiness = portalAccountStorageWriteReadiness();
   if (!storageWriteReadiness.writable) return storageNotWritableResponse(storageWriteReadiness.details);
 
@@ -119,6 +120,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   if (!isPortalMode(request)) return portalOnlyResponse();
   if (!(await isAuthenticatedAdminRequest(request))) return authRequiredResponse();
+  if (!isTrustedMutationRequest(request)) return untrustedMutationResponse();
   const storageWriteReadiness = portalAccountStorageWriteReadiness();
   if (!storageWriteReadiness.writable) return storageNotWritableResponse(storageWriteReadiness.details);
 
@@ -176,6 +178,7 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   if (!isPortalMode(request)) return portalOnlyResponse();
   if (!(await isAuthenticatedAdminRequest(request))) return authRequiredResponse();
+  if (!isTrustedMutationRequest(request)) return untrustedMutationResponse();
   const storageWriteReadiness = portalAccountStorageWriteReadiness();
   if (!storageWriteReadiness.writable) return storageNotWritableResponse(storageWriteReadiness.details);
 
@@ -229,15 +232,11 @@ function authRequiredResponse() {
 }
 
 async function isAuthenticatedAdminRequest(request: Request) {
-  const credentials = getBasicAuthCredentialsFromEnv();
   const providedCredential = parseBasicAuthCredential(request.headers.get("authorization") ?? "");
   if (!providedCredential) return false;
 
-  if (credentials.some(
-    (credential) =>
-      credential.username === providedCredential.username &&
-      credential.password === providedCredential.password,
-  )) {
+  const environmentAccount = findBasicAuthAccountForCredential(providedCredential);
+  if (environmentAccount?.role === "admin" && environmentAccount.sites.includes("portal")) {
     return true;
   }
 
@@ -251,6 +250,32 @@ async function isAuthenticatedAdminRequest(request: Request) {
   });
 
   return portalAccount?.source === "PORTAL_ACCOUNTS" && portalAccount.role === "admin";
+}
+
+function isTrustedMutationRequest(request: Request) {
+  const secFetchSite = request.headers.get("sec-fetch-site");
+  if (secFetchSite && !["none", "same-origin", "same-site"].includes(secFetchSite)) return false;
+
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+
+  const host = request.headers.get("host");
+  if (!host) return false;
+
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
+function untrustedMutationResponse() {
+  return NextResponse.json(
+    {
+      error: "Rejected cross-site account management request.",
+    },
+    { status: 403 },
+  );
 }
 
 function storageNotWritableResponse(details: ReturnType<typeof portalAccountStorageWriteReadiness>["details"]) {

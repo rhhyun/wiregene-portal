@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getWiregeneAppMode } from "@/lib/app-mode";
-import { getBasicAuthAccountSummaries, getBasicAuthCredentialsFromEnv } from "@/lib/basic-auth-users";
+import { findBasicAuthAccountForCredential } from "@/lib/basic-auth-users";
 import { portalSiteIds, verifyPortalAccountCredentials } from "@/lib/portal-accounts";
 
 export const runtime = "nodejs";
@@ -30,8 +30,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false });
   }
 
-  const environmentAccount = verifyEnvironmentCredential({ username, password, site });
+  const environmentAccount = findBasicAuthAccountForCredential({ username, password });
   if (environmentAccount) {
+    if (!environmentAccount.sites.includes(site)) {
+      return NextResponse.json({ ok: false });
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -66,30 +70,6 @@ export async function POST(request: Request) {
         "Cache-Control": "no-store",
       },
     },
-  );
-}
-
-function verifyEnvironmentCredential({
-  username,
-  password,
-  site,
-}: {
-  username: string;
-  password: string;
-  site: string;
-}) {
-  const credential = getBasicAuthCredentialsFromEnv().find(
-    (candidate) => candidate.username === username && candidate.password === password,
-  );
-  if (!credential) return null;
-
-  return (
-    getBasicAuthAccountSummaries().find(
-      (account) =>
-        account.username === credential.username &&
-        account.source === credential.source &&
-        account.sites.includes(site),
-    ) ?? null
   );
 }
 

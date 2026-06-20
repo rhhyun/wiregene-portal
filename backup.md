@@ -12,7 +12,7 @@ values in this file.
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
 - Latest known commit: d77bc7f Remove cross-site sidebar links
-- App version: Ver 1.57
+- App version: Ver 1.58
 
 ## Git Status At Generation
 
@@ -273,4 +273,14 @@ Current production route issue as of 2026-06-12:
   using Portal auth-check could still reject the same ID.
 - 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
   from `Ver 1.56` to `Ver 1.57` for the ENV-account auth-check fix.
+- 2026-06-20: Hardened Portal as the Wiregene control plane. Environment Basic
+  Auth credentials are no longer treated as Portal administrators unless the
+  username is explicitly listed in an admin env variable. Admin mutations now
+  reject cross-site requests when Origin or Fetch Metadata headers indicate an
+  untrusted source. Site-specific manual passwords must be at least 12
+  characters or left blank for automatic generation.
+- 2026-06-20: Added `docs/portal-security-model.md` to preserve the identity,
+  admin, subsite auth-check, site-credential, and deployment rules.
+- 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.57` to `Ver 1.58` for the Portal security model hardening.
 <!-- MANUAL-NOTES-END -->

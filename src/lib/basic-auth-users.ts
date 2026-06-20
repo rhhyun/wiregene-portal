@@ -1,3 +1,5 @@
+import crypto from "crypto";
+
 export type BasicAuthCredential = {
   username: string;
   password: string;
@@ -57,6 +59,29 @@ export function getBasicAuthAccountSummaries(env: BasicAuthEnv = process.env) {
       sites: WIREGENE_ADMIN_SITE_IDS,
     }),
   );
+}
+
+export function findBasicAuthAccountForCredential(
+  provided: ProvidedBasicAuthCredential,
+  env: BasicAuthEnv = process.env,
+): BasicAuthAccountSummary | null {
+  const credential = getBasicAuthCredentialsFromEnv(env).find((candidate) =>
+    basicAuthCredentialsMatch(candidate, provided),
+  );
+  if (!credential) return null;
+
+  return (
+    getBasicAuthAccountSummaries(env).find(
+      (account) => account.username === credential.username && account.source === credential.source,
+    ) ?? null
+  );
+}
+
+export function basicAuthCredentialsMatch(
+  expected: Pick<BasicAuthCredential, "username" | "password">,
+  provided: ProvidedBasicAuthCredential,
+) {
+  return expected.username === provided.username && timingSafeStringEqual(expected.password, provided.password);
 }
 
 export function getAdminUsernamesFromEnv(env: BasicAuthEnv = process.env) {
@@ -139,4 +164,18 @@ function parseAdminUsers(value: string | undefined): string[] {
     .split(",")
     .map((entry) => normalizeAuthUsername(entry))
     .filter(Boolean);
+}
+
+function timingSafeStringEqual(expected: string, provided: string) {
+  const expectedBytes = Buffer.from(expected);
+  const providedBytes = Buffer.from(provided);
+
+  if (expectedBytes.length !== providedBytes.length) {
+    const paddedProvided = Buffer.alloc(expectedBytes.length);
+    providedBytes.copy(paddedProvided, 0, 0, Math.min(providedBytes.length, paddedProvided.length));
+    crypto.timingSafeEqual(expectedBytes, paddedProvided);
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expectedBytes, providedBytes);
 }
