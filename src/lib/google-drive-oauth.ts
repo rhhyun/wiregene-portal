@@ -42,7 +42,7 @@ function formatGoogleOauthRefreshError(
     return [
       "Google OAuth refresh failed: invalid_grant.",
       "The refresh token is invalid, revoked, expired, copied incorrectly, or was generated with a different GOOGLE_DRIVE_CLIENT_ID / GOOGLE_DRIVE_CLIENT_SECRET pair.",
-      "Regenerate GOOGLE_DRIVE_REFRESH_TOKEN locally with npm run google-drive:oauth using the same client id and secret that are stored in GitHub Actions.",
+      "For Portal, regenerate GOOGLE_DRIVE_REFRESH_TOKEN with npm.cmd run google-drive:oauth:portal using the exact same client id and secret, then run npm.cmd run vercel:repair-portal-google-drive to update only the Portal Vercel production env.",
     ].join(" ");
   }
 
@@ -50,6 +50,7 @@ function formatGoogleOauthRefreshError(
     return [
       "Google OAuth refresh failed: invalid_client.",
       "GOOGLE_DRIVE_CLIENT_ID or GOOGLE_DRIVE_CLIENT_SECRET is incorrect.",
+      "For Portal, verify the OAuth client in Google Cloud Console and run npm.cmd run vercel:repair-portal-google-drive with the matching Client ID, Client Secret, and Refresh Token.",
       description,
     ]
       .filter(Boolean)

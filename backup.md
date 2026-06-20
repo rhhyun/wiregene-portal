@@ -283,4 +283,22 @@ Current production route issue as of 2026-06-12:
   admin, subsite auth-check, site-credential, and deployment rules.
 - 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
   from `Ver 1.57` to `Ver 1.58` for the Portal security model hardening.
+- 2026-06-20: Clarified the Portal Google Drive `invalid_grant` path. This
+  state means Portal reached `backend=google-drive`, but Google rejected the
+  current `GOOGLE_DRIVE_REFRESH_TOKEN` for the Vercel Client ID/Secret pair.
+  It is not the old `/var/task` local-json write failure.
+- 2026-06-20: Added `docs/portal-google-drive-oauth-repair-ko.md` with the
+  Windows PowerShell commands `npm.cmd run google-drive:oauth:portal` and
+  `npm.cmd run vercel:repair-portal-google-drive`. The repair script updates
+  only the `wiregene-portal` Vercel production env after validating the OAuth
+  3-value set against Google first.
+- 2026-06-20: Updated account-management and operational error messages so
+  `invalid_client` and `invalid_grant` tell the operator to issue a Portal
+  token from the same OAuth Client ID/Secret pair and then run the Portal
+  repair script.
+- 2026-06-20: Hardened `scripts/vercel-audit-google-drive-env.ps1` so Vercel
+  API or JSON parsing failures appear as `api-error` instead of being
+  misreported as every env var missing.
+- 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.58` to `Ver 1.59` for the Google Drive OAuth repair guidance.
 <!-- MANUAL-NOTES-END -->

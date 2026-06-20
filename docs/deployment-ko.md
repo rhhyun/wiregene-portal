@@ -137,7 +137,15 @@ GitHub Actions에서 성공하면 Google Drive의 `research-briefing-database.js
 
 `Google OAuth refresh failed: invalid_grant`:
 
-`GOOGLE_DRIVE_REFRESH_TOKEN`이 만료되었거나 다른 OAuth client 값과 섞였습니다. 로컬에서 `npm run google-drive:oauth`로 refresh token을 다시 발급하고 Vercel과 GitHub Secrets를 같은 값으로 갱신합니다.
+`GOOGLE_DRIVE_REFRESH_TOKEN`이 만료되었거나 다른 OAuth client 값과 섞였습니다. Portal 계정 저장소 오류라면 일반 `google-drive:oauth`가 아니라 Portal 전용 절차를 사용합니다.
+
+```powershell
+cd C:\Users\rhhyu\Documents\Portal.wiregene.com
+npm.cmd run google-drive:oauth:portal
+npm.cmd run vercel:repair-portal-google-drive
+```
+
+세부 절차는 `docs/portal-google-drive-oauth-repair-ko.md`를 따릅니다. 이 스크립트는 Vercel에 쓰기 전에 Google token endpoint에서 Client ID, Client Secret, Refresh Token 조합을 먼저 검증합니다.
 
 `Zotero is not configured`:
 
