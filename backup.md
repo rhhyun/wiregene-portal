@@ -12,7 +12,7 @@ values in this file.
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
 - Latest known commit: d77bc7f Remove cross-site sidebar links
-- App version: Ver 1.56
+- App version: Ver 1.57
 
 ## Git Status At Generation
 
@@ -266,4 +266,11 @@ Current production route issue as of 2026-06-12:
   the normal `AUTO_START=false` no-op restart path.
 - 2026-06-19: Version-up status: yes. The visible Portal app version was bumped
   from `Ver 1.54` to `Ver 1.55` for the identity-script no-op return fix.
+- 2026-06-20: Fixed Portal remote auth checks so `APP_BASIC_AUTH_USER` and
+  `APP_BASIC_AUTH_USERS` environment credentials are accepted by
+  `/api/auth/check` for authorized sites such as `protocol`. Before this fix,
+  the admin panel displayed ENV accounts as having site access, but subsites
+  using Portal auth-check could still reject the same ID.
+- 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.56` to `Ver 1.57` for the ENV-account auth-check fix.
 <!-- MANUAL-NOTES-END -->
