@@ -301,4 +301,16 @@ Current production route issue as of 2026-06-12:
   misreported as every env var missing.
 - 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
   from `Ver 1.58` to `Ver 1.59` for the Google Drive OAuth repair guidance.
+- 2026-06-20: Production `portal.wiregene.com` headers showed `Server: Vercel`
+  and `X-Vercel-Id` while both `wiregene` and `rhhyun` logins were rejected, so
+  Synology `.env` changes would not restore browser access. Added
+  `scripts/repair-portal-login-env.ps1` and
+  `npm run vercel:repair-portal-login` to reset Vercel production
+  `APP_BASIC_AUTH_USERS` for `rhhyun` and `wiregene`, list both as admins,
+  redeploy production, and verify Basic Auth without printing the password.
+- 2026-06-20: Added `docs/portal-emergency-login-repair-ko.md`. Generated
+  emergency passwords are written only to `.codex-logs/portal-emergency-login-*.txt`,
+  which is already ignored by Git.
+- 2026-06-20: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.59` to `Ver 1.60` for the Portal emergency login repair tooling.
 <!-- MANUAL-NOTES-END -->
