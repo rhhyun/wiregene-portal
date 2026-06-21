@@ -33,6 +33,7 @@ export const WIREGENE_ADMIN_SITE_IDS = [
 const WIREGENE_SITE_ID_SET = new Set(WIREGENE_ADMIN_SITE_IDS);
 const WIREGENE_SITE_ID_ALIASES: Record<string, string> = {
   arim: "human",
+  "admin.wiregene.com": "homepage-admin",
   homepage: "homepage-admin",
   "www-admin": "homepage-admin",
   "www.wiregene.com/admin": "homepage-admin",

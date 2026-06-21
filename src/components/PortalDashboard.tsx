@@ -18,8 +18,8 @@ const launcherSites = [
   {
     label: "Wiregene Homepage Admin",
     shortLabel: "WWW Admin",
-    href: "https://www.wiregene.com/admin?wiregene_from=portal",
-    detail: "www.wiregene.com 홈페이지 관리자 페이지",
+    href: "https://admin.wiregene.com/?wiregene_from=portal",
+    detail: "admin.wiregene.com 홈페이지 관리자 페이지",
     icon: Globe2,
   },
   {

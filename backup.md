@@ -363,4 +363,10 @@ Current production route issue as of 2026-06-12:
   `http://127.0.0.1:53682/oauth2callback` and prints the exact URI that must be
   added to the Google Cloud Console OAuth Client when the client type is
   `Web application`.
+- 2026-06-21: Updated the Portal `homepage-admin` target from
+  `www.wiregene.com/admin` to `admin.wiregene.com` in the launcher and Portal
+  account site list. Added `admin.wiregene.com` as a site-access alias for the
+  existing `homepage-admin` site id, keeping stored account data compatible.
+- 2026-06-21: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.64` to `Ver 1.65` for the WWW Admin domain change.
 <!-- MANUAL-NOTES-END -->

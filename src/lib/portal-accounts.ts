@@ -17,7 +17,7 @@ export const portalSites = [
     id: "homepage-admin",
     label: "Wiregene Homepage Admin",
     shortLabel: "WWW Admin",
-    url: "https://www.wiregene.com/admin",
+    url: "https://admin.wiregene.com",
   },
   {
     id: "search",
