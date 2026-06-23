@@ -542,13 +542,13 @@ export function AccountManagementPanel() {
 
   return (
     <div className="grid gap-6">
-      <section className="rounded-lg border border-zinc-200 bg-white p-5">
+      <section id="member-management" className="scroll-mt-6 rounded-lg border border-zinc-200 bg-white p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-sm font-semibold text-emerald-700">Access Control</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-normal text-zinc-950">ID 관리</h2>
+            <h2 className="mt-1 text-2xl font-semibold tracking-normal text-zinc-950">회원관리</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              Portal 로그인 계정과 사이트별 실제 접근 ID를 분리해서 관리합니다.
+              전체관리자만 회원 ID를 생성하고, 초기 PW와 이메일/연락처를 등록할 수 있습니다.
             </p>
           </div>
           <button
@@ -580,20 +580,6 @@ export function AccountManagementPanel() {
         />
       </section>
 
-      <SiteCredentialListSection
-        siteCredentialLists={siteCredentialLists}
-        status={state.status}
-        writable={Boolean(state.writable)}
-        drafts={credentialDrafts}
-        deletingId={deletingId}
-        updatingCredentialId={updatingCredentialId}
-        onDraftChange={(credentialId, value) =>
-          setCredentialDrafts((current) => ({ ...current, [credentialId]: value }))
-        }
-        onPasswordChange={(credential) => void changeSiteCredentialPassword(credential)}
-        onDelete={(credential) => void deleteSiteCredential(credential)}
-      />
-
       {temporaryPassword ? (
         <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
           <p className="text-sm font-semibold text-emerald-800">초기 비밀번호 저장 완료</p>
@@ -621,6 +607,99 @@ export function AccountManagementPanel() {
         <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
           {state.warning}
         </p>
+      ) : null}
+
+      {state.writable ? (
+        <section className="rounded-lg border border-zinc-200 bg-white p-5">
+          <div>
+            <p className="text-sm font-semibold text-emerald-700">Member ID</p>
+            <h3 className="mt-1 text-lg font-semibold text-zinc-950">회원 ID 등록</h3>
+          </div>
+          <form onSubmit={createAccount} className="mt-4 grid gap-4">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                ID
+                <input
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  required
+                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                  placeholder="wiregene-user"
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                초기 PW
+                <input
+                  value={initialPassword}
+                  onChange={(event) => setInitialPassword(event.target.value)}
+                  type="password"
+                  required
+                  minLength={8}
+                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                  placeholder="8자 이상"
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                이메일/연락처
+                <input
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  type="text"
+                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                  placeholder="name@example.com / 연락처"
+                />
+              </label>
+            </div>
+
+            <details className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-zinc-700">
+                접근 가능한 서브페이지 조정
+              </summary>
+              <div className="mt-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-zinc-600">기본값은 회원용 전체 서브페이지입니다.</p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSites(defaultUserSites.length ? defaultUserSites : ["portal"])}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50"
+                  >
+                    <ListChecks className="h-3.5 w-3.5" aria-hidden />
+                    회원용 전체
+                  </button>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                  {memberCreationSites.map((site) => {
+                    const checked = selectedSites.includes(site.id);
+                    return (
+                      <button
+                        key={site.id}
+                        type="button"
+                        onClick={() => toggleSite(site.id)}
+                        className={`flex h-11 items-center justify-between rounded-md border px-3 text-sm font-semibold transition ${
+                          checked
+                            ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                            : "border-zinc-300 bg-white text-zinc-700 hover:border-emerald-200"
+                        }`}
+                      >
+                        {site.shortLabel}
+                        {checked ? <Check className="h-4 w-4" aria-hidden /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </details>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex h-11 w-fit items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              {submitting ? "등록 중" : "회원 ID 생성"}
+            </button>
+          </form>
+        </section>
       ) : null}
 
       {state.writable ? (
@@ -666,13 +745,13 @@ export function AccountManagementPanel() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <label className="grid gap-2 text-sm font-semibold text-zinc-700">
-                Email
+                이메일/연락처
                 <input
                   value={siteForm.email}
                   onChange={(event) => setSiteForm((current) => ({ ...current, email: event.target.value }))}
-                  type="email"
+                  type="text"
                   className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
-                  placeholder="name@example.com"
+                  placeholder="name@example.com / 연락처"
                 />
               </label>
               <label className="grid gap-2 text-sm font-semibold text-zinc-700">
@@ -693,91 +772,6 @@ export function AccountManagementPanel() {
             >
               <Plus className="h-4 w-4" aria-hidden />
               {siteSubmitting ? "저장 중" : "사이트 ID 생성"}
-            </button>
-          </form>
-        </section>
-      ) : null}
-
-      {state.writable ? (
-        <section className="rounded-lg border border-zinc-200 bg-white p-5">
-          <h3 className="text-lg font-semibold text-zinc-950">회원 ID 등록</h3>
-          <form onSubmit={createAccount} className="mt-4 grid gap-4">
-            <div className="grid gap-4 lg:grid-cols-3">
-              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
-                ID
-                <input
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  required
-                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
-                  placeholder="wiregene-user"
-                />
-              </label>
-              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
-                초기 PW
-                <input
-                  value={initialPassword}
-                  onChange={(event) => setInitialPassword(event.target.value)}
-                  type="password"
-                  required
-                  minLength={8}
-                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
-                  placeholder="8자 이상"
-                />
-              </label>
-              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
-                이메일 연락처
-                <input
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  type="email"
-                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
-                  placeholder="name@example.com"
-                />
-              </label>
-            </div>
-
-            <div>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-zinc-700">접근 가능한 서브페이지</p>
-                <button
-                  type="button"
-                  onClick={() => setSelectedSites(defaultUserSites.length ? defaultUserSites : ["portal"])}
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50"
-                >
-                  <ListChecks className="h-3.5 w-3.5" aria-hidden />
-                  회원용 전체
-                </button>
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                {memberCreationSites.map((site) => {
-                  const checked = selectedSites.includes(site.id);
-                  return (
-                    <button
-                      key={site.id}
-                      type="button"
-                      onClick={() => toggleSite(site.id)}
-                      className={`flex h-11 items-center justify-between rounded-md border px-3 text-sm font-semibold transition ${
-                        checked
-                          ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                          : "border-zinc-300 bg-white text-zinc-700 hover:border-emerald-200"
-                      }`}
-                    >
-                      {site.shortLabel}
-                      {checked ? <Check className="h-4 w-4" aria-hidden /> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex h-11 w-fit items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-              {submitting ? "등록 중" : "회원 ID 생성"}
             </button>
           </form>
         </section>
@@ -863,23 +857,23 @@ export function AccountManagementPanel() {
                           />
                         </label>
                         <label className="grid gap-2 text-sm font-semibold text-zinc-700">
-                          Email
+                          이메일/연락처
                           <input
                             value={draft.email}
                             onChange={(event) => updateAccountDraft(account.id as string, { email: event.target.value })}
-                            type="email"
+                            type="text"
                             className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
                           />
                         </label>
                         <label className="grid gap-2 text-sm font-semibold text-zinc-700">
-                          Role
+                          권한
                           <select
                             value={draft.role}
                             onChange={(event) => changeAccountDraftRole(account.id as string, event.target.value === "admin" ? "admin" : "user")}
                             className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm font-normal outline-none focus:border-emerald-400"
                           >
                             <option value="user">사용자</option>
-                            <option value="admin">관리자</option>
+                            <option value="admin">전체관리자</option>
                           </select>
                         </label>
                         <label className="flex items-center gap-2 self-end text-sm font-semibold text-zinc-700">
@@ -949,6 +943,20 @@ export function AccountManagementPanel() {
           <p className="mt-4 text-sm text-zinc-500">등록된 계정이 없습니다.</p>
         )}
       </section>
+
+      <SiteCredentialListSection
+        siteCredentialLists={siteCredentialLists}
+        status={state.status}
+        writable={Boolean(state.writable)}
+        drafts={credentialDrafts}
+        deletingId={deletingId}
+        updatingCredentialId={updatingCredentialId}
+        onDraftChange={(credentialId, value) =>
+          setCredentialDrafts((current) => ({ ...current, [credentialId]: value }))
+        }
+        onPasswordChange={(credential) => void changeSiteCredentialPassword(credential)}
+        onDelete={(credential) => void deleteSiteCredential(credential)}
+      />
     </div>
   );
 }
@@ -1200,7 +1208,7 @@ function sourceLabel(source: AccountSource) {
 }
 
 function roleLabel(role: AccountSummary["role"]) {
-  return role === "admin" ? "관리자" : "사용자";
+  return role === "admin" ? "전체관리자" : "사용자";
 }
 
 function formatDomain(url: string) {

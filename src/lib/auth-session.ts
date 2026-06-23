@@ -13,7 +13,7 @@ type AuthSessionEnv = Record<string, string | undefined>;
 export type CurrentWiregeneUser = {
   username: string;
   role: "admin" | "user";
-  roleLabel: "관리자" | "사용자";
+  roleLabel: "전체관리자" | "사용자";
   isAdmin: boolean;
 };
 
@@ -118,7 +118,7 @@ function currentUser(username: string, role: "admin" | "user"): CurrentWiregeneU
   return {
     username,
     role,
-    roleLabel: role === "admin" ? "관리자" : "사용자",
+    roleLabel: role === "admin" ? "전체관리자" : "사용자",
     isAdmin: role === "admin",
   };
 }

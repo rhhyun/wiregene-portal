@@ -105,6 +105,15 @@ export function PortalDashboard({
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <AdminBadge currentUser={currentUser} />
+            {canManageAccounts ? (
+              <a
+                href="#member-management"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-emerald-300 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-100"
+              >
+                회원관리
+                <UserRoundCog className="h-4 w-4" aria-hidden />
+              </a>
+            ) : null}
             <a
               href="https://search.wiregene.com/?wiregene_from=portal"
               className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50"
@@ -169,7 +178,7 @@ function AdminBadge({ currentUser }: { currentUser?: CurrentWiregeneUser | null 
   return (
     <div className="inline-flex h-10 items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-800">
       <ShieldCheck className="h-4 w-4" aria-hidden />
-      <span>관리자</span>
+      <span>전체관리자</span>
       <span className="max-w-48 truncate text-xs font-medium text-emerald-700">{currentUser.username}</span>
     </div>
   );

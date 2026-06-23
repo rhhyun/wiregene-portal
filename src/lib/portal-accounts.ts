@@ -497,8 +497,7 @@ function normalizeUsername(value: unknown) {
 }
 
 function normalizeEmail(value: unknown) {
-  const email = typeof value === "string" ? value.trim().toLowerCase() : "";
-  return email.includes("@") ? email.slice(0, 160) : "";
+  return normalizeFreeText(value, 160);
 }
 
 function normalizeAccountRole(username: string, role: unknown): PortalRole {
