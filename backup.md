@@ -370,4 +370,32 @@ Current production route issue as of 2026-06-12:
   existing `homepage-admin` site id, keeping stored account data compatible.
 - 2026-06-21: Version-up status: yes. The visible Portal app version was bumped
   from `Ver 1.64` to `Ver 1.65` for the WWW Admin domain change.
+
+## 2026-06-24 Subsite Account Delegation
+
+Decision:
+
+- Portal is the Wiregene subsite dashboard, launcher, and account governance
+  index.
+- Each subsite owns its own login IDs and password changes. Portal must not be
+  the default write path for subsite passwords.
+- Synology local JSON remains the production source of truth for Portal's own
+  account data, with Google Drive as backup mirror. Vercel is emergency access
+  only.
+
+Change:
+
+- Added per-site account-management metadata to `portalSites`, including the
+  new `admin.wiregene.com/admin` target for WWW Admin.
+- Preserved the new member-management UI while hiding the legacy Portal subsite
+  credential create/change/delete controls behind
+  `PORTAL_ENABLE_LEGACY_SITE_CREDENTIALS=true`.
+- The subsite credential list now functions as "서브사이트 계정 관리 위치"
+  and opens each site's own account-management location.
+- API writes for legacy `site-credential` operations now return
+  `SUBSITE_CREDENTIALS_DELEGATED` unless legacy mode is deliberately enabled.
+- Existing legacy Portal-stored subsite IDs are still displayed as migration
+  hints, but the operator should create or change the actual password inside
+  the corresponding subsite.
+- Visible version label is `Ver 1.66 | 2026 copyright by JK Hyun`.
 <!-- MANUAL-NOTES-END -->

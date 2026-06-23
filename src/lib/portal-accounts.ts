@@ -13,60 +13,100 @@ export const portalSites = [
     label: "Portal",
     shortLabel: "Portal",
     url: "https://portal.wiregene.com",
+    identityOwner: "portal",
+    accountManagementUrl: "https://portal.wiregene.com",
+    accountManagementLabel: "Portal 계정 관리",
+    accountPolicy: "Portal 접속 계정만 이곳에서 관리합니다.",
   },
   {
     id: "homepage-admin",
     label: "Wiregene Homepage Admin",
     shortLabel: "WWW Admin",
     url: "https://admin.wiregene.com",
+    identityOwner: "subsite",
+    accountManagementUrl: "https://admin.wiregene.com/admin",
+    accountManagementLabel: "admin.wiregene.com 관리자 ID",
+    accountPolicy: "홈페이지 관리자 ID/PW는 admin.wiregene.com에서 자체 관리합니다.",
   },
   {
     id: "search",
     label: "Research Search",
     shortLabel: "Search",
     url: "https://search.wiregene.com",
+    identityOwner: "subsite",
+    accountManagementUrl: "https://search.wiregene.com",
+    accountManagementLabel: "Search 자체 계정",
+    accountPolicy: "Search ID/PW는 Search 서비스에서 자체 관리하고 Portal은 연결만 담당합니다.",
   },
   {
     id: "omni",
     label: "Wiregene Omni",
     shortLabel: "Omni",
     url: "https://omni.wiregene.com",
+    identityOwner: "subsite",
+    accountManagementUrl: "https://omni.wiregene.com",
+    accountManagementLabel: "Omni 자체 계정",
+    accountPolicy: "Omni ID/PW는 Omni 서비스에서 자체 관리하고 Portal은 연결만 담당합니다.",
   },
   {
     id: "protocol",
     label: "Research Protocol",
     shortLabel: "Protocol",
     url: "https://protocol.wiregene.com",
+    identityOwner: "subsite",
+    accountManagementUrl: "https://protocol.wiregene.com",
+    accountManagementLabel: "Protocol 자체 계정",
+    accountPolicy: "Protocol ID/PW는 Protocol 서비스에서 자체 관리하고 Portal은 연결만 담당합니다.",
   },
   {
     id: "meta",
     label: "Meta-analysis",
     shortLabel: "Meta",
     url: "https://meta.wiregene.com",
+    identityOwner: "subsite",
+    accountManagementUrl: "https://meta.wiregene.com",
+    accountManagementLabel: "Meta 자체 계정",
+    accountPolicy: "Meta ID/PW는 Meta 서비스에서 자체 관리하고 Portal은 연결만 담당합니다.",
   },
   {
     id: "hyunlab",
     label: "HyunLab Wiregene Platform",
     shortLabel: "HW ERP",
     url: "https://hyunlab.wiregene.com",
+    identityOwner: "subsite",
+    accountManagementUrl: "https://hyunlab.wiregene.com",
+    accountManagementLabel: "HyunLab 자체 계정",
+    accountPolicy: "HyunLab ERP ID/PW는 HyunLab 서비스에서 자체 관리하고 Portal은 연결만 담당합니다.",
   },
   {
     id: "sci-experiment",
     label: "SCI Experiment",
     shortLabel: "SCI EXP",
     url: "https://sci-experiment.wiregene.com",
+    identityOwner: "subsite",
+    accountManagementUrl: "https://sci-experiment.wiregene.com",
+    accountManagementLabel: "SCI Experiment 자체 계정",
+    accountPolicy: "SCI Experiment ID/PW는 해당 서비스에서 자체 관리하고 Portal은 연결만 담당합니다.",
   },
   {
     id: "behavior",
     label: "SCI BBB AI",
     shortLabel: "SCI BBB AI",
     url: "https://sci-bbb.wiregene.com",
+    identityOwner: "subsite",
+    accountManagementUrl: "https://sci-bbb.wiregene.com",
+    accountManagementLabel: "SCI BBB AI 자체 계정",
+    accountPolicy: "SCI BBB AI ID/PW는 해당 서비스에서 자체 관리하고 Portal은 연결만 담당합니다.",
   },
   {
     id: "human",
     label: "ARIM Human",
     shortLabel: "Human",
     url: "https://arim.wiregene.com",
+    identityOwner: "subsite",
+    accountManagementUrl: "https://arim.wiregene.com",
+    accountManagementLabel: "ARIM Human 자체 계정",
+    accountPolicy: "ARIM Human ID/PW는 ARIM 서비스에서 자체 관리하고 Portal은 연결만 담당합니다.",
   },
 ] as const;
 
@@ -348,6 +388,12 @@ export async function setPortalSiteCredentialPassword(input: {
   const now = new Date().toISOString();
 
   if (!effectivePassword) throw new Error("Password is required.");
+
+  if (await verifyPassword(effectivePassword, credential.passwordHash)) {
+    throw new Error(
+      "New site ID PW is the same as the current PW. Enter a different PW, or leave PW blank to generate a new strong PW.",
+    );
+  }
 
   credential.passwordHash = await hashPassword(effectivePassword);
   credential.passwordUpdatedAt = now;

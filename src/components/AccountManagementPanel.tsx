@@ -3,6 +3,7 @@
 import {
   Check,
   Database,
+  ExternalLink,
   KeyRound,
   ListChecks,
   Pencil,
@@ -22,6 +23,10 @@ type PortalSite = {
   label: string;
   shortLabel: string;
   url: string;
+  identityOwner?: "portal" | "subsite";
+  accountManagementUrl?: string;
+  accountManagementLabel?: string;
+  accountPolicy?: string;
 };
 
 type AccountSource = "APP_BASIC_AUTH_USER" | "APP_BASIC_AUTH_USERS" | "PORTAL_ACCOUNTS";
@@ -138,6 +143,8 @@ const defaultMemberSiteIds = [
   "behavior",
   "human",
 ];
+
+const legacySiteCredentialControlsEnabled = false;
 
 export function AccountManagementPanel() {
   const [state, setState] = useState<AccountState>({
@@ -609,7 +616,7 @@ export function AccountManagementPanel() {
         </p>
       ) : null}
 
-      {state.writable ? (
+      {legacySiteCredentialControlsEnabled && state.writable ? (
         <section className="rounded-lg border border-zinc-200 bg-white p-5">
           <div>
             <p className="text-sm font-semibold text-emerald-700">Member ID</p>
@@ -989,8 +996,8 @@ function SiteCredentialListSection({
           <Database className="h-4 w-4" aria-hidden />
         </span>
         <div>
-          <p className="text-sm font-semibold text-emerald-700">Subsite ID List</p>
-          <h3 className="text-xl font-semibold tracking-normal text-zinc-950">서브사이트별 실제 ID</h3>
+          <p className="text-sm font-semibold text-emerald-700">Subsite Account Control</p>
+          <h3 className="text-xl font-semibold tracking-normal text-zinc-950">서브사이트 계정 관리 위치</h3>
         </div>
       </div>
 
@@ -1004,9 +1011,23 @@ function SiteCredentialListSection({
                 <p className="mt-1 truncate text-xs text-zinc-500">{formatDomain(site.url)}</p>
               </div>
               <span className="shrink-0 rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-700">
-                {site.count} IDs
+                {site.identityOwner === "portal" ? "Portal 관리" : "자체 관리"}
               </span>
             </div>
+
+            <p className="mt-3 text-sm leading-6 text-zinc-600">
+              {site.accountPolicy ?? "이 사이트의 ID/PW는 해당 서비스의 자체 관리 화면에서 처리합니다."}
+            </p>
+
+            <a
+              href={site.accountManagementUrl ?? site.url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-flex h-9 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50"
+            >
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+              {site.accountManagementLabel ?? "계정 관리 화면 열기"}
+            </a>
 
             {site.credentials.length ? (
               <div className="mt-4 divide-y divide-zinc-100">
@@ -1018,7 +1039,10 @@ function SiteCredentialListSection({
                         {[credential.email, credential.label].filter(Boolean).join(" · ")}
                       </p>
                     ) : null}
-                    {writable ? (
+                    <p className="rounded-md bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                      기존 Portal 저장 ID입니다. 새 운영 원칙에서는 해당 사이트 자체 계정으로 이관하세요.
+                    </p>
+                    {legacySiteCredentialControlsEnabled && writable ? (
                       <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
                         <input
                           value={drafts[credential.id] ?? ""}

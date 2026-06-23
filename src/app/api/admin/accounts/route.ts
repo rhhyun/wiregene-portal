@@ -91,6 +91,7 @@ export async function POST(request: Request) {
     };
 
     if (payload.kind === "site-credential") {
+      if (!legacySiteCredentialWritesEnabled()) return siteCredentialDelegatedResponse();
       const result = await createPortalSiteCredential({
         siteId: payload.siteId,
         username: payload.username,
@@ -162,6 +163,7 @@ export async function PATCH(request: Request) {
     }
 
     if (payload.action === "set-site-credential-password" && payload.siteCredentialId) {
+      if (!legacySiteCredentialWritesEnabled()) return siteCredentialDelegatedResponse();
       const result = await setPortalSiteCredentialPassword({
         siteCredentialId: payload.siteCredentialId,
         password: payload.password,
@@ -191,6 +193,7 @@ export async function DELETE(request: Request) {
     } | null;
 
     if (payload?.kind === "site-credential" && payload.siteCredentialId) {
+      if (!legacySiteCredentialWritesEnabled()) return siteCredentialDelegatedResponse();
       return NextResponse.json(await deletePortalSiteCredential(payload.siteCredentialId));
     }
 
@@ -284,6 +287,21 @@ function storageNotWritableResponse(details: ReturnType<typeof portalAccountStor
     {
       error: details?.message ?? "Portal account storage is not writable.",
       details,
+    },
+    { status: 409 },
+  );
+}
+
+function legacySiteCredentialWritesEnabled() {
+  return process.env.PORTAL_ENABLE_LEGACY_SITE_CREDENTIALS === "true";
+}
+
+function siteCredentialDelegatedResponse() {
+  return NextResponse.json(
+    {
+      error:
+        "서브사이트 ID/PW는 이제 각 사이트에서 자체 관리합니다. Portal은 관리 위치 연결과 상태 관제만 담당합니다.",
+      code: "SUBSITE_CREDENTIALS_DELEGATED",
     },
     { status: 409 },
   );
