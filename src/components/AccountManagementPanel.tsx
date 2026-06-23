@@ -127,6 +127,18 @@ type AccountEditDraft = {
   disabled: boolean;
 };
 
+const defaultMemberSiteIds = [
+  "portal",
+  "omni",
+  "protocol",
+  "search",
+  "meta",
+  "hyunlab",
+  "sci-experiment",
+  "behavior",
+  "human",
+];
+
 export function AccountManagementPanel() {
   const [state, setState] = useState<AccountState>({
     status: "loading",
@@ -138,12 +150,16 @@ export function AccountManagementPanel() {
   });
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"admin" | "user">("user");
+  const [initialPassword, setInitialPassword] = useState("");
   const defaultUserSites = useMemo(
-    () => ["portal", "omni", "protocol", "search"].filter((siteId) => state.sites.some((site) => site.id === siteId)),
+    () => defaultMemberSiteIds.filter((siteId) => state.sites.some((site) => site.id === siteId)),
     [state.sites],
   );
-  const [selectedSites, setSelectedSites] = useState<string[]>(["portal", "omni", "protocol", "search"]);
+  const memberCreationSites = useMemo(
+    () => state.sites.filter((site) => defaultMemberSiteIds.includes(site.id)),
+    [state.sites],
+  );
+  const [selectedSites, setSelectedSites] = useState<string[]>(defaultMemberSiteIds);
   const [siteForm, setSiteForm] = useState({
     siteId: "omni",
     username: "",
@@ -185,7 +201,14 @@ export function AccountManagementPanel() {
       const response = await fetch("/api/admin/accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "portal-account", username, email, role, sites: selectedSites }),
+        body: JSON.stringify({
+          kind: "portal-account",
+          username,
+          email,
+          password: initialPassword,
+          role: "user",
+          sites: selectedSites,
+        }),
       });
       const payload = await readAccountApiPayload(response);
 
@@ -195,14 +218,14 @@ export function AccountManagementPanel() {
 
       setUsername("");
       setEmail("");
-      setRole("user");
+      setInitialPassword("");
       setSelectedSites(defaultUserSites.length ? defaultUserSites : ["portal"]);
       setTemporaryPassword({
-        label: "Portal 계정",
+        label: "회원 ID",
         username: payload.account.username,
         password: payload.temporaryPassword,
       });
-      await reloadAccounts("Portal 계정을 생성했습니다.");
+      await reloadAccounts("회원 ID를 생성했습니다.");
     } catch (error) {
       setState((current) => ({
         ...current,
@@ -517,13 +540,6 @@ export function AccountManagementPanel() {
     });
   }
 
-  function changeRole(nextRole: "admin" | "user") {
-    setRole(nextRole);
-    if (nextRole === "admin") {
-      setSelectedSites(state.sites.map((site) => site.id));
-    }
-  }
-
   return (
     <div className="grid gap-6">
       <section className="rounded-lg border border-zinc-200 bg-white p-5">
@@ -580,11 +596,11 @@ export function AccountManagementPanel() {
 
       {temporaryPassword ? (
         <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
-          <p className="text-sm font-semibold text-emerald-800">임시 비밀번호 발급 완료</p>
+          <p className="text-sm font-semibold text-emerald-800">초기 비밀번호 저장 완료</p>
           <div className="mt-3 grid gap-3 md:grid-cols-[12rem_1fr]">
             <InfoLine label="구분" value={temporaryPassword.label} />
             <InfoLine label="ID" value={temporaryPassword.username} />
-            <InfoLine label="Temporary PW" value={temporaryPassword.password} strong />
+            <InfoLine label="초기 PW" value={temporaryPassword.password} strong />
           </div>
         </section>
       ) : null}
@@ -684,9 +700,9 @@ export function AccountManagementPanel() {
 
       {state.writable ? (
         <section className="rounded-lg border border-zinc-200 bg-white p-5">
-          <h3 className="text-lg font-semibold text-zinc-950">Portal 계정 등록</h3>
+          <h3 className="text-lg font-semibold text-zinc-950">회원 ID 등록</h3>
           <form onSubmit={createAccount} className="mt-4 grid gap-4">
-            <div className="grid gap-4 lg:grid-cols-[1fr_1fr_10rem]">
+            <div className="grid gap-4 lg:grid-cols-3">
               <label className="grid gap-2 text-sm font-semibold text-zinc-700">
                 ID
                 <input
@@ -698,7 +714,19 @@ export function AccountManagementPanel() {
                 />
               </label>
               <label className="grid gap-2 text-sm font-semibold text-zinc-700">
-                Email
+                초기 PW
+                <input
+                  value={initialPassword}
+                  onChange={(event) => setInitialPassword(event.target.value)}
+                  type="password"
+                  required
+                  minLength={8}
+                  className="h-10 rounded-md border border-zinc-300 px-3 text-sm font-normal outline-none focus:border-emerald-400"
+                  placeholder="8자 이상"
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
+                이메일 연락처
                 <input
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
@@ -707,23 +735,22 @@ export function AccountManagementPanel() {
                   placeholder="name@example.com"
                 />
               </label>
-              <label className="grid gap-2 text-sm font-semibold text-zinc-700">
-                Role
-                <select
-                  value={role}
-                  onChange={(event) => changeRole(event.target.value === "admin" ? "admin" : "user")}
-                  className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm font-normal outline-none focus:border-emerald-400"
-                >
-                  <option value="user">사용자</option>
-                  <option value="admin">관리자</option>
-                </select>
-              </label>
             </div>
 
             <div>
-              <p className="text-sm font-semibold text-zinc-700">접근 가능한 사이트</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-zinc-700">접근 가능한 서브페이지</p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSites(defaultUserSites.length ? defaultUserSites : ["portal"])}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50"
+                >
+                  <ListChecks className="h-3.5 w-3.5" aria-hidden />
+                  회원용 전체
+                </button>
+              </div>
               <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                {state.sites.map((site) => {
+                {memberCreationSites.map((site) => {
                   const checked = selectedSites.includes(site.id);
                   return (
                     <button
@@ -750,7 +777,7 @@ export function AccountManagementPanel() {
               className="inline-flex h-11 w-fit items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
             >
               <Plus className="h-4 w-4" aria-hidden />
-              {submitting ? "등록 중" : "Portal ID 생성"}
+              {submitting ? "등록 중" : "회원 ID 생성"}
             </button>
           </form>
         </section>

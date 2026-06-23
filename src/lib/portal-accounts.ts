@@ -3,6 +3,7 @@ import { promisify } from "util";
 import { createGrantJsonStorage } from "./grant-storage";
 
 const scrypt = promisify(crypto.scrypt);
+const manualPortalPasswordMinimumLength = 8;
 const manualSitePasswordMinimumLength = 12;
 const sharedSearchOnlyPortalUsernames = new Set(["wiregene"]);
 
@@ -173,9 +174,12 @@ export async function createPortalAccount(input: {
   email?: string;
   role?: PortalRole;
   sites?: string[];
+  password?: string;
 }) {
   const data = await portalAccountStorage.read();
   const username = normalizeUsername(input.username);
+  const password = normalizePasswordInput(input.password);
+  assertManualPortalPasswordPolicy(password);
 
   if (!username) throw new Error("Username is required.");
   if (data.accounts.some((account) => account.username.toLowerCase() === username.toLowerCase())) {
@@ -183,8 +187,10 @@ export async function createPortalAccount(input: {
   }
 
   const now = new Date().toISOString();
-  const temporaryPassword = generateTemporaryPassword();
+  const generatedPassword = password ? undefined : generateTemporaryPassword();
+  const temporaryPassword = password || generatedPassword;
   const role = normalizeAccountRole(username, input.role);
+  if (!temporaryPassword) throw new Error("Password is required.");
   const account: PortalAccount = {
     id: crypto.randomUUID(),
     username,
@@ -204,6 +210,7 @@ export async function createPortalAccount(input: {
   return {
     account: toAccountSummary(account),
     temporaryPassword,
+    generatedPassword: Boolean(generatedPassword),
   };
 }
 
@@ -517,6 +524,16 @@ function assertManualSitePasswordPolicy(password: string) {
   }
   if (password.trim() !== password || /[\r\n]/.test(password)) {
     throw new Error("Manual site passwords cannot start/end with whitespace or include line breaks.");
+  }
+}
+
+function assertManualPortalPasswordPolicy(password: string) {
+  if (!password) return;
+  if (password.length < manualPortalPasswordMinimumLength) {
+    throw new Error(`Initial portal passwords must be at least ${manualPortalPasswordMinimumLength} characters.`);
+  }
+  if (password.trim() !== password || /[\r\n]/.test(password)) {
+    throw new Error("Initial portal passwords cannot start/end with whitespace or include line breaks.");
   }
 }
 

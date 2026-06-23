@@ -109,6 +109,7 @@ export async function POST(request: Request) {
       email: payload.email,
       role: payload.role,
       sites: payload.sites,
+      password: payload.password,
     });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

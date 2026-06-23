@@ -87,6 +87,8 @@ export function PortalDashboard({
   currentUser?: CurrentWiregeneUser | null;
   versionLabel: string;
 }) {
+  const canManageAccounts = Boolean(currentUser?.isAdmin);
+
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
       <header className="border-b border-zinc-200 bg-white">
@@ -155,7 +157,7 @@ export function PortalDashboard({
           </div>
         </section>
 
-        <AccountManagementPanel />
+        {canManageAccounts ? <AccountManagementPanel /> : null}
       </div>
     </main>
   );

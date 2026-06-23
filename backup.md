@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-20 12:22:05 +0900
+Generated: 2026-06-24 08:07:28 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,15 +11,19 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: d77bc7f Remove cross-site sidebar links
-- App version: Ver 1.58
+- Latest known commit: 5a94b12 Point WWW Admin to admin subdomain
+- App version: Ver 1.66
 
 ## Git Status At Generation
 
 Env-like paths and backup.md are intentionally omitted from this section.
 
 ```text
-(clean after omitting env-like paths and backup.md)
+M src/app/api/admin/accounts/route.ts
+ M src/components/AccountManagementPanel.tsx
+ M src/components/PortalDashboard.tsx
+ M src/lib/portal-accounts.ts
+ M src/lib/version.ts
 ```
 
 ## Active Work Summary
@@ -90,7 +94,8 @@ development machine after reviewing it.
 - `scripts/synology-update-portal.sh`: full Synology update, build, restart,
   local health check, version check, and public route check.
 - `scripts/synology-auto-wiregene-identity.sh`: automatic identity/admin/shared
-  auth secret setup for Portal and known subsite env files.
+  auth secret setup for Portal and known subsite env files, with `wiregene`
+  scoped to `search` unless explicitly changed.
 - `scripts/synology-start-portal.sh`: Synology container build/restart helper.
 - `synology/docker/portal/.env.example`: runtime environment template.
 - `src/lib/version.ts`: visible application version.
@@ -103,8 +108,8 @@ development machine after reviewing it.
 - On Synology, syntax-check shell scripts with `sh -n scripts/<name>.sh`.
 - If public Portal is intended to run from Synology, confirm
   `portal.wiregene.com` does not return `Server: Vercel` or `X-Vercel-Id`
-  headers. If public Portal is intentionally Vercel, keep
-  `PUBLIC_PORTAL_ROUTE_POLICY=warn` and verify Google Drive OAuth storage.
+  headers. Keep Vercel only as emergency/temporary access; production ID/PW
+  storage belongs on Synology local JSON with Google Drive backup mirroring.
 
 ## Manual Handoff Notes
 
