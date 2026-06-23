@@ -108,7 +108,7 @@ export async function POST(request: Request) {
     const result = await createPortalAccount({
       username: payload.username,
       email: payload.email,
-      role: payload.role,
+      role: "user",
       sites: payload.sites,
       password: payload.password,
     });

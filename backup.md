@@ -398,4 +398,30 @@ Change:
   hints, but the operator should create or change the actual password inside
   the corresponding subsite.
 - Visible version label is `Ver 1.66 | 2026 copyright by JK Hyun`.
+
+## 2026-06-24 Admin-Only Member ID Creation
+
+Decision:
+
+- `회원관리` is visible and usable only to full administrators.
+- Member ID creation is deliberately simple: ID, initial PW, and
+  email/contact.
+- Newly created member accounts are always `user` role accounts, not full
+  administrators.
+- Default access is the complete member-facing subpage set, excluding
+  `homepage-admin` because that site owns its own admin users.
+
+Change:
+
+- Fixed the UI gate so the member ID creation form is visible when Portal
+  account storage is writable, while the legacy site-credential form remains
+  hidden behind `PORTAL_ENABLE_LEGACY_SITE_CREDENTIALS=true`.
+- The member access site list now derives from the current Portal site list
+  instead of a hard-coded array, so future member-facing subpages follow the
+  same configuration.
+- Removed the role-changing dropdown from the member account edit UI; role is
+  shown read-only to avoid accidental full-admin promotion.
+- The account creation API now forces `role: "user"` for new Portal member
+  accounts even if a crafted request supplies a different role.
+- Visible version label is `Ver 1.67 | 2026 copyright by JK Hyun`.
 <!-- MANUAL-NOTES-END -->

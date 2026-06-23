@@ -132,18 +132,6 @@ type AccountEditDraft = {
   disabled: boolean;
 };
 
-const defaultMemberSiteIds = [
-  "portal",
-  "omni",
-  "protocol",
-  "search",
-  "meta",
-  "hyunlab",
-  "sci-experiment",
-  "behavior",
-  "human",
-];
-
 const legacySiteCredentialControlsEnabled = false;
 
 export function AccountManagementPanel() {
@@ -158,15 +146,13 @@ export function AccountManagementPanel() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [initialPassword, setInitialPassword] = useState("");
+  const memberAccessSites = useMemo(() => state.sites.filter(isMemberAccessSite), [state.sites]);
   const defaultUserSites = useMemo(
-    () => defaultMemberSiteIds.filter((siteId) => state.sites.some((site) => site.id === siteId)),
-    [state.sites],
+    () => memberAccessSites.map((site) => site.id),
+    [memberAccessSites],
   );
-  const memberCreationSites = useMemo(
-    () => state.sites.filter((site) => defaultMemberSiteIds.includes(site.id)),
-    [state.sites],
-  );
-  const [selectedSites, setSelectedSites] = useState<string[]>(defaultMemberSiteIds);
+  const [selectedSites, setSelectedSites] = useState<string[]>([]);
+  const [memberSiteDefaultsApplied, setMemberSiteDefaultsApplied] = useState(false);
   const [siteForm, setSiteForm] = useState({
     siteId: "omni",
     username: "",
@@ -192,6 +178,13 @@ export function AccountManagementPanel() {
     if (state.siteCredentialLists.length) return state.siteCredentialLists;
     return buildSiteCredentialLists(state.sites, state.siteCredentials);
   }, [state.siteCredentialLists, state.siteCredentials, state.sites]);
+
+  useEffect(() => {
+    if (!memberSiteDefaultsApplied && defaultUserSites.length) {
+      setSelectedSites(defaultUserSites);
+      setMemberSiteDefaultsApplied(true);
+    }
+  }, [defaultUserSites, memberSiteDefaultsApplied]);
 
   async function reloadAccounts(notice?: string) {
     setState((current) => ({ ...current, status: "loading", message: undefined, warning: undefined, notice }));
@@ -289,13 +282,19 @@ export function AccountManagementPanel() {
 
   function buildAccountDraft(account: AccountSummary): AccountEditDraft {
     const allSiteIds = state.sites.map((site) => site.id);
-    const currentSites = account.sites?.length ? account.sites : ["portal"];
+    const memberSiteIds = memberAccessSites.map((site) => site.id);
+    const currentSites = account.sites?.length
+      ? account.sites.filter((siteId) => memberSiteIds.includes(siteId))
+      : ["portal"].filter((siteId) => memberSiteIds.includes(siteId));
 
     return {
       username: account.username,
       email: account.email ?? "",
       role: account.role === "admin" ? "admin" : "user",
-      sites: account.role === "admin" ? allSiteIds : Array.from(new Set(["portal", ...currentSites])),
+      sites:
+        account.role === "admin"
+          ? allSiteIds
+          : Array.from(new Set(["portal", ...currentSites])).filter((siteId) => memberSiteIds.includes(siteId)),
       disabled: Boolean(account.disabled),
     };
   }
@@ -325,23 +324,6 @@ export function AccountManagementPanel() {
       return {
         ...current,
         [accountId]: { ...draft, ...patch },
-      };
-    });
-  }
-
-  function changeAccountDraftRole(accountId: string, nextRole: "admin" | "user") {
-    setAccountDrafts((current) => {
-      const draft = current[accountId];
-      if (!draft) return current;
-      const allSiteIds = state.sites.map((site) => site.id);
-      const fallbackSites = ["portal", "omni", "protocol", "search"].filter((siteId) => allSiteIds.includes(siteId));
-      return {
-        ...current,
-        [accountId]: {
-          ...draft,
-          role: nextRole,
-          sites: nextRole === "admin" ? allSiteIds : Array.from(new Set(["portal", ...(draft.sites.length ? draft.sites : fallbackSites)])),
-        },
       };
     });
   }
@@ -616,11 +598,14 @@ export function AccountManagementPanel() {
         </p>
       ) : null}
 
-      {legacySiteCredentialControlsEnabled && state.writable ? (
+      {state.writable ? (
         <section className="rounded-lg border border-zinc-200 bg-white p-5">
           <div>
             <p className="text-sm font-semibold text-emerald-700">Member ID</p>
             <h3 className="mt-1 text-lg font-semibold text-zinc-950">회원 ID 등록</h3>
+            <p className="mt-2 text-sm leading-6 text-zinc-600">
+              전체관리자 전용 메뉴입니다. ID, 초기 PW, 이메일/연락처만 등록하면 회원용 전체 서브페이지 접근 권한이 기본 적용됩니다.
+            </p>
           </div>
           <form onSubmit={createAccount} className="mt-4 grid gap-4">
             <div className="grid gap-4 lg:grid-cols-3">
@@ -675,7 +660,7 @@ export function AccountManagementPanel() {
                   </button>
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                  {memberCreationSites.map((site) => {
+                  {memberAccessSites.map((site) => {
                     const checked = selectedSites.includes(site.id);
                     return (
                       <button
@@ -709,7 +694,7 @@ export function AccountManagementPanel() {
         </section>
       ) : null}
 
-      {state.writable ? (
+      {legacySiteCredentialControlsEnabled && state.writable ? (
         <section className="rounded-lg border border-zinc-200 bg-white p-5">
           <h3 className="text-lg font-semibold text-zinc-950">사이트별 ID 등록</h3>
           <form onSubmit={createSiteCredential} className="mt-4 grid gap-4">
@@ -874,14 +859,9 @@ export function AccountManagementPanel() {
                         </label>
                         <label className="grid gap-2 text-sm font-semibold text-zinc-700">
                           권한
-                          <select
-                            value={draft.role}
-                            onChange={(event) => changeAccountDraftRole(account.id as string, event.target.value === "admin" ? "admin" : "user")}
-                            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm font-normal outline-none focus:border-emerald-400"
-                          >
-                            <option value="user">사용자</option>
-                            <option value="admin">전체관리자</option>
-                          </select>
+                          <span className="inline-flex h-10 items-center rounded-md border border-zinc-200 bg-zinc-50 px-3 text-sm font-semibold text-zinc-700">
+                            {roleLabel(draft.role)}
+                          </span>
                         </label>
                         <label className="flex items-center gap-2 self-end text-sm font-semibold text-zinc-700">
                           <input
@@ -897,7 +877,7 @@ export function AccountManagementPanel() {
                       <div>
                         <p className="text-sm font-semibold text-zinc-700">접근 가능한 사이트</p>
                         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                          {state.sites.map((site) => {
+                          {memberAccessSites.map((site) => {
                             const checked = draft.sites.includes(site.id);
                             return (
                               <button
@@ -1223,6 +1203,10 @@ function InfoLine({ label, value, strong = false }: { label: string; value: stri
 
 function siteLabel(siteId: string, sites: PortalSite[]) {
   return sites.find((site) => site.id === siteId)?.shortLabel ?? siteId;
+}
+
+function isMemberAccessSite(site: PortalSite) {
+  return site.id !== "homepage-admin";
 }
 
 function sourceLabel(source: AccountSource) {
