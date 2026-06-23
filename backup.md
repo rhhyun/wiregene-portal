@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-24 08:07:28 +09:00
+Generated: 2026-06-24 08:15:41 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,7 +11,7 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: 5a94b12 Point WWW Admin to admin subdomain
+- Latest known commit: 46d08b5 Refine admin member management menu
 - App version: Ver 1.66
 
 ## Git Status At Generation
@@ -19,11 +19,7 @@ values in this file.
 Env-like paths and backup.md are intentionally omitted from this section.
 
 ```text
-M src/app/api/admin/accounts/route.ts
- M src/components/AccountManagementPanel.tsx
- M src/components/PortalDashboard.tsx
- M src/lib/portal-accounts.ts
- M src/lib/version.ts
+(clean after omitting env-like paths and backup.md)
 ```
 
 ## Active Work Summary
