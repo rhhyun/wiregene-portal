@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-24 08:15:41 +09:00
+Generated: 2026-06-24 22:26:33 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,8 +11,8 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: 46d08b5 Refine admin member management menu
-- App version: Ver 1.66
+- Latest known commit: 0f8590c Restrict member ID creation to admins
+- App version: Ver 1.68
 
 ## Git Status At Generation
 
@@ -370,7 +370,6 @@ Current production route issue as of 2026-06-12:
   existing `homepage-admin` site id, keeping stored account data compatible.
 - 2026-06-21: Version-up status: yes. The visible Portal app version was bumped
   from `Ver 1.64` to `Ver 1.65` for the WWW Admin domain change.
-
 ## 2026-06-24 Subsite Account Delegation
 
 Decision:
@@ -424,4 +423,17 @@ Change:
 - The account creation API now forces `role: "user"` for new Portal member
   accounts even if a crafted request supplies a different role.
 - Visible version label is `Ver 1.67 | 2026 copyright by JK Hyun`.
+
+## 2026-06-24 Emergency Login Restoration
+
+- 2026-06-24: Repaired Vercel emergency Basic Auth for Portal and Search.
+  `scripts/repair-portal-login-env.ps1` reset production `APP_BASIC_AUTH_USERS`
+  so `rhhyun` is the Portal admin and `wiregene` remains search-only. The
+  generated emergency password was written only to the ignored
+  `.codex-logs/portal-emergency-login-*.txt` file, not to Git.
+- 2026-06-24: Live verification passed after redeploy: `rhhyun` returned HTTP
+  200 on `portal.wiregene.com` and `search.wiregene.com`; `wiregene` returned
+  HTTP 401 on `portal.wiregene.com` and HTTP 200 on `search.wiregene.com`.
+- 2026-06-24: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.67` to `Ver 1.68` for the emergency login restoration.
 <!-- MANUAL-NOTES-END -->
