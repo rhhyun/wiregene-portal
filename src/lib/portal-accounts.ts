@@ -69,6 +69,16 @@ export const portalSites = [
     accountPolicy: "Meta ID/PW는 Meta 서비스에서 자체 관리하고 Portal은 연결만 담당합니다.",
   },
   {
+    id: "finance",
+    label: "Finance Brain",
+    shortLabel: "Finance",
+    url: "https://finance.wiregene.com",
+    identityOwner: "portal",
+    accountManagementUrl: "https://portal.wiregene.com",
+    accountManagementLabel: "Portal rhhyun account",
+    accountPolicy: "Finance Brain uses the same rhhyun ID/PW as portal.wiregene.com.",
+  },
+  {
     id: "hyunlab",
     label: "HyunLab Wiregene Platform",
     shortLabel: "HW ERP",

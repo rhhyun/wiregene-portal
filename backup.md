@@ -436,4 +436,13 @@ Change:
   HTTP 401 on `portal.wiregene.com` and HTTP 200 on `search.wiregene.com`.
 - 2026-06-24: Version-up status: yes. The visible Portal app version was bumped
   from `Ver 1.67` to `Ver 1.68` for the emergency login restoration.
+
+## 2026-06-26 Finance Brain Site Registration
+
+- Added `finance.wiregene.com` as the official `Finance Brain` Portal site.
+- The site uses Portal-aligned access: ID `rhhyun`, with the same password as
+  the existing `portal.wiregene.com` `rhhyun` account.
+- The actual password must remain outside Git and be supplied to Finance Brain
+  as `FINANCE_BRAIN_WEB_PASSWORD` on the deployment host.
+- Visible version label is `Ver 1.69 | 2026 copyright by JK Hyun`.
 <!-- MANUAL-NOTES-END -->
