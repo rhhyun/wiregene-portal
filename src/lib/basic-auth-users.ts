@@ -24,6 +24,7 @@ export const WIREGENE_ADMIN_SITE_IDS = [
   "protocol",
   "search",
   "meta",
+  "finance",
   "hyunlab",
   "sci-experiment",
   "behavior",
@@ -37,6 +38,7 @@ const WIREGENE_SITE_ID_ALIASES: Record<string, string> = {
   homepage: "homepage-admin",
   "www-admin": "homepage-admin",
   "www.wiregene.com/admin": "homepage-admin",
+  "finance.wiregene.com": "finance",
   "sci-bbb": "behavior",
 };
 const RESERVED_NON_ADMIN_USERNAMES = new Set(["wiregene"]);

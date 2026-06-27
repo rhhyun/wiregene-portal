@@ -3,6 +3,7 @@ import {
   BarChart3,
   BookOpenText,
   BrainCircuit,
+  ChartCandlestick,
   FileText,
   FlaskConical,
   Globe2,
@@ -49,6 +50,13 @@ const launcherSites = [
     href: "https://meta.wiregene.com/?wiregene_from=portal",
     detail: "PRISMA, 검색식, screening, extraction, analysis",
     icon: BarChart3,
+  },
+  {
+    label: "Finance Brain",
+    shortLabel: "Finance",
+    href: "https://finance.wiregene.com/?wiregene_from=portal",
+    detail: "Trading Alpha Lab and market research workspace",
+    icon: ChartCandlestick,
   },
   {
     label: "HyunLab Wiregene Platform",

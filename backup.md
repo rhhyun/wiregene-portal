@@ -445,4 +445,31 @@ Change:
 - The actual password must remain outside Git and be supplied to Finance Brain
   as `FINANCE_BRAIN_WEB_PASSWORD` on the deployment host.
 - Visible version label is `Ver 1.69 | 2026 copyright by JK Hyun`.
+
+## 2026-06-27 Finance Brain Admin Login Alignment
+
+- Added `finance` to `WIREGENE_ADMIN_SITE_IDS` so environment-backed full admin
+  accounts such as `rhhyun` are recognized for Finance Brain when a Portal
+  auth-check flow asks for `site=finance`.
+- Added `finance.wiregene.com` as a site-access alias for the `finance` site id.
+- Added Finance Brain to the Portal launcher and bumped the visible Portal
+  version from `Ver 1.68` to `Ver 1.69`.
+- Deployed to Vercel production and verified live: `rhhyun` returns HTTP 200 on
+  `portal.wiregene.com`, the Portal page shows `Ver 1.69` and `Finance Brain`,
+  `/api/admin/accounts` reports `rhhyun` with `finance` access, and `wiregene`
+  remains HTTP 401 on Portal / HTTP 200 on Search.
+- Live route check found `finance.wiregene.com` currently resolves to
+  `127.0.0.1`, so external HTTPS access will fail until DNS/reverse proxy is
+  corrected.
+
+## 2026-06-27 Portal Emergency Password Reset
+
+- Re-ran `scripts/repair-portal-login-env.ps1 -GeneratePassword -Redeploy`
+  after browser login with `rhhyun` still failed for the operator.
+- The new generated password was written only to the ignored local file
+  `.codex-logs/portal-emergency-login-20260627-154303.txt`; do not copy it into
+  Git, docs, chat, or deployment logs.
+- Vercel production redeploy completed and live verification passed:
+  `rhhyun` can access `portal.wiregene.com`, while `wiregene` remains blocked
+  from Portal and allowed on Search only.
 <!-- MANUAL-NOTES-END -->
