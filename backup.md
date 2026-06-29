@@ -472,4 +472,60 @@ Change:
 - Vercel production redeploy completed and live verification passed:
   `rhhyun` can access `portal.wiregene.com`, while `wiregene` remains blocked
   from Portal and allowed on Search only.
+
+## 2026-06-27 MusicScore Site Registration
+
+- Added `music.wiregene.com` as the official `Hyunlab AGI MusicScore` Portal
+  site and launcher entry.
+- Added `music` to `WIREGENE_ADMIN_SITE_IDS` and `music.wiregene.com` as a
+  site-access alias so full admin accounts such as `rhhyun` include MusicScore
+  in Portal account summaries.
+- MusicScore owns its own login session and `MUSIC_AUTH_*` secrets; Portal only
+  links to `https://music.wiregene.com/login` and tracks the service boundary.
+- Bumped the visible Portal version from `Ver 1.69` to `Ver 1.70`.
+- Added `.codex/`, `.codex-logs/`, and local `.env*` files to `.vercelignore`
+  so generated secret files are not sent in future Vercel build contexts.
+- Deployed to Vercel production and verified live: `portal.wiregene.com` shows
+  `Ver 1.70` and `Hyunlab AGI MusicScore`, `/api/admin/accounts` reports
+  `rhhyun` with `music` access, and `wiregene` remains HTTP 401 on Portal /
+  HTTP 200 on Search.
+- Live route check found `music.wiregene.com` resolves to Vercel
+  `76.76.21.21`; `/login` returns HTTP 200.
+
+## 2026-06-28 Portal Emergency Password Reset
+
+- The previously documented local password no longer matched Vercel production:
+  live checks with `.codex-logs/portal-emergency-login-20260627-154303.txt`
+  returned HTTP 401 for `rhhyun`.
+- Re-ran `scripts/repair-portal-login-env.ps1 -GeneratePassword -Redeploy`,
+  which generated `.codex-logs/portal-emergency-login-20260628-182931.txt`,
+  updated Vercel production `APP_BASIC_AUTH_USERS`, redeployed
+  `portal.wiregene.com`, and verified `rhhyun` login.
+- Copied the latest generated credential to
+  `.codex-logs/portal-current-login.txt`; use this fixed local file first
+  instead of older timestamped files.
+- Updated the repair script so future generated password resets always refresh
+  `.codex-logs/portal-current-login.txt` automatically.
+- Live verification after redeploy: `rhhyun` returned HTTP 200 on
+  `portal.wiregene.com` and `/api/admin/accounts`.
+
+## 2026-06-28 Portal Account Storage Lockdown
+
+- The member-management page again reported Google OAuth `invalid_grant` because
+  Vercel production still had `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive`.
+  Live `/api/admin/accounts` returned HTTP 200 but included
+  `portalAccountStorageError` with `path=google-drive:portal-accounts.json`.
+- Locked Portal account storage so Vercel ignores Google Drive primary mode by
+  default. Even if `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive` is present,
+  Vercel falls back to read-only `local-json` unless
+  `PORTAL_ALLOW_VERCEL_GOOGLE_DRIVE_PRIMARY=true` is deliberately enabled for a
+  time-boxed emergency.
+- Split `/api/admin/accounts` storage read errors from read-only warnings so
+  Vercel read-only state does not become the same member-management error banner.
+- Updated `docs/portal-security-model.md` and
+  `docs/portal-google-drive-oauth-repair-ko.md` with the lock rule.
+- Required Vercel production env policy: `PORTAL_ACCOUNT_STORAGE_BACKEND=local-json`,
+  `PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP=false`, and
+  `PORTAL_ALLOW_VERCEL_GOOGLE_DRIVE_PRIMARY=false`. Synology remains the
+  long-term `local-json` source of truth; Google Drive is backup-only.
 <!-- MANUAL-NOTES-END -->

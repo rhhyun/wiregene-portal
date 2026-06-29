@@ -116,6 +116,7 @@ type AccountApiPayload = {
   error?: string;
   details?: ApiErrorDetails;
   portalAccountStorageError?: ApiErrorDetails;
+  portalAccountStorageWarning?: ApiErrorDetails;
 };
 
 type TemporaryPasswordState = {
@@ -1078,12 +1079,15 @@ async function getAccountState(): Promise<AccountState> {
     const accounts = payload.accounts ?? [];
     const sites = payload.sites ?? [];
     const siteCredentials = payload.siteCredentials ?? [];
-    const warning = payload.portalAccountStorageError
+    const storageError = payload.portalAccountStorageError
       ? formatApiError("Portal 계정 저장소를 사용할 수 없습니다.", payload.portalAccountStorageError)
+      : undefined;
+    const storageWarning = payload.portalAccountStorageWarning
+      ? formatApiError("Portal 계정 저장소가 읽기 전용입니다.", payload.portalAccountStorageWarning)
       : undefined;
 
     return {
-      status: warning ? "error" : "ready",
+      status: storageError ? "error" : "ready",
       accounts,
       sites,
       siteAccountLists: payload.siteAccountLists ?? buildSiteAccountLists(sites, accounts),
@@ -1091,7 +1095,7 @@ async function getAccountState(): Promise<AccountState> {
       siteCredentialLists: payload.siteCredentialLists ?? buildSiteCredentialLists(sites, siteCredentials),
       managedBy: payload.managedBy ?? "Vercel Environment Variables",
       writable: Boolean(payload.writable),
-      warning,
+      warning: storageError ?? storageWarning,
     };
   } catch (error) {
     return {

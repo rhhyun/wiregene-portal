@@ -9,6 +9,7 @@ import {
   Globe2,
   LayoutDashboard,
   Microscope,
+  Music,
   ShieldCheck,
   UserRoundCog,
 } from "lucide-react";
@@ -57,6 +58,13 @@ const launcherSites = [
     href: "https://finance.wiregene.com/?wiregene_from=portal",
     detail: "Trading Alpha Lab and market research workspace",
     icon: ChartCandlestick,
+  },
+  {
+    label: "Hyunlab AGI MusicScore",
+    shortLabel: "Music",
+    href: "https://music.wiregene.com/?wiregene_from=portal",
+    detail: "MusicXML-first audio-to-score reconstruction workspace",
+    icon: Music,
   },
   {
     label: "HyunLab Wiregene Platform",

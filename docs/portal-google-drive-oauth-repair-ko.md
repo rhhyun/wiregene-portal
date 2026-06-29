@@ -17,6 +17,11 @@ Google OAuth refresh failed: invalid_grant
 - 다른 서브사이트가 마비되는 경우는 주로 다른 사이트의 Vercel/GitHub env를 덮어쓰거나, Google 계정에서 OAuth 앱 접근을 취소하거나, OAuth client 자체를 삭제했을 때입니다.
 - Portal 복구 스크립트는 `wiregene-portal` Vercel project만 수정합니다. Search/Meta env는 건드리지 않습니다.
 - 장기 운영은 `docs/portal-synology-primary-google-drive-backup-ko.md`를 따릅니다.
+- 2026-06-28 이후 Vercel Google Drive 원본 저장소는 기본 차단됩니다.
+  `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive`가 Vercel production에 남아
+  있어도 `PORTAL_ALLOW_VERCEL_GOOGLE_DRIVE_PRIMARY=true`를 명시적으로 켠
+  응급 상황이 아니면 Portal은 읽기 전용 `local-json` 경계로 떨어집니다.
+  이 override는 시간 제한 응급 복구 때만 켜고, 복구 후 즉시 끄세요.
 
 ## 1. Portal Refresh Token 발급
 
@@ -61,6 +66,7 @@ npm.cmd run vercel:repair-portal-google-drive
 APP_BASE_URL=https://portal.wiregene.com
 WIREGENE_APP_MODE=portal
 PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive
+PORTAL_ALLOW_VERCEL_GOOGLE_DRIVE_PRIMARY=true
 PORTAL_ACCOUNT_STORAGE_PATH_DRIVE_FILENAME=portal-accounts.json
 GOOGLE_DRIVE_CLIENT_ID=<same client id>
 GOOGLE_DRIVE_CLIENT_SECRET=<same client secret>

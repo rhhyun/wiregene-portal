@@ -94,6 +94,7 @@ function Write-GeneratedCredentialFile {
   )
 
   Set-Content -LiteralPath $path -Value $content -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $logDir "portal-current-login.txt") -Value $content -Encoding UTF8
   return $path
 }
 

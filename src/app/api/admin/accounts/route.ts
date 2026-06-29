@@ -60,7 +60,8 @@ export async function GET(request: Request) {
       siteCredentialCount: siteCredentials.length,
       managedBy: mode === "portal" ? "Portal account storage + Vercel Basic Auth" : "Vercel Environment Variables",
       writable: mode === "portal" && storageWriteReadiness.writable && !portalAccountStorageError,
-      portalAccountStorageError: portalAccountStorageError ?? storageWriteReadiness.details,
+      portalAccountStorageError,
+      portalAccountStorageWarning: storageWriteReadiness.details,
       portalAccountStorage: storageWriteReadiness,
     },
     {

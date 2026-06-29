@@ -1,6 +1,10 @@
 .next/
 node_modules/
 .vercel/
+.codex/
+.codex-logs/
+.env*
+!.env.example
 out/
 build/
 coverage/

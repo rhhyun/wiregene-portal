@@ -36,6 +36,7 @@ next-dev-*.log
 google-drive-oauth*.log
 dev-server.*.log
 meta-analysis-*.png
+.codex/
 .codex-logs/
 
 # local database

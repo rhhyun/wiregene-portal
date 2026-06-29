@@ -6,6 +6,7 @@ const scrypt = promisify(crypto.scrypt);
 const manualPortalPasswordMinimumLength = 8;
 const manualSitePasswordMinimumLength = 12;
 const sharedSearchOnlyPortalUsernames = new Set(["wiregene"]);
+const allowVercelGoogleDrivePrimary = process.env.PORTAL_ALLOW_VERCEL_GOOGLE_DRIVE_PRIMARY === "true";
 
 export const portalSites = [
   {
@@ -77,6 +78,16 @@ export const portalSites = [
     accountManagementUrl: "https://portal.wiregene.com",
     accountManagementLabel: "Portal rhhyun account",
     accountPolicy: "Finance Brain uses the same rhhyun ID/PW as portal.wiregene.com.",
+  },
+  {
+    id: "music",
+    label: "Hyunlab AGI MusicScore",
+    shortLabel: "Music",
+    url: "https://music.wiregene.com",
+    identityOwner: "subsite",
+    accountManagementUrl: "https://music.wiregene.com/login",
+    accountManagementLabel: "MusicScore 자체 계정",
+    accountPolicy: "MusicScore ID/PW는 MusicScore 서비스에서 자체 관리하고 Portal은 연결만 담당합니다.",
   },
   {
     id: "hyunlab",
@@ -176,10 +187,10 @@ const portalAccountStorage = createGrantJsonStorage<PortalAccountData>({
   envName: "PORTAL_ACCOUNT_STORAGE_PATH",
   defaultRelativePath: ".data/portal-accounts.json",
   label: "portal account",
-  backendEnvNames: ["PORTAL_ACCOUNT_STORAGE_BACKEND"],
+  backendEnvNames: portalAccountStorageBackendEnvNames(),
   defaultBackend: "local-json",
   localReadOnlyMessage:
-    "Portal account local storage cannot write under /var/task. Production ID/PW storage must run on Synology with local-json; Google Drive should be configured as a backup mirror, not the long-term Vercel primary store.",
+    "Portal account storage is locked away from Vercel Google Drive primary mode. Production ID/PW storage must run on Synology with local-json; Google Drive is backup-only unless PORTAL_ALLOW_VERCEL_GOOGLE_DRIVE_PRIMARY=true is deliberately set for a time-boxed emergency.",
   googleDriveBackup: {
     enabledEnvName: "PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP",
     fileNameEnvName: "PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP_FILENAME",
@@ -189,6 +200,15 @@ const portalAccountStorage = createGrantJsonStorage<PortalAccountData>({
   emptyData: () => ({ accounts: [], siteCredentials: [] }),
   normalize: normalizePortalAccountData,
 });
+
+function portalAccountStorageBackendEnvNames() {
+  const configuredBackend = process.env.PORTAL_ACCOUNT_STORAGE_BACKEND?.trim().toLowerCase();
+  if (process.env.VERCEL && configuredBackend === "google-drive" && !allowVercelGoogleDrivePrimary) {
+    return [];
+  }
+
+  return ["PORTAL_ACCOUNT_STORAGE_BACKEND"];
+}
 
 export function portalSiteIds() {
   return portalSites.map((site) => site.id);

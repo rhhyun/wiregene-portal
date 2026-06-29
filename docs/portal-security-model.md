@@ -89,5 +89,10 @@ Cross-site account-management requests are rejected.
   `PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP=true`.
 - Vercel deployments are emergency/temporary access only. They should not be
   the long-term source of truth for Portal ID/PW records.
+- Vercel Google Drive primary storage is locked by default. Even if
+  `PORTAL_ACCOUNT_STORAGE_BACKEND=google-drive` is present on Vercel, Portal
+  falls back to read-only `local-json` unless
+  `PORTAL_ALLOW_VERCEL_GOOGLE_DRIVE_PRIMARY=true` is deliberately set for a
+  time-boxed emergency. Do not leave that override enabled.
 - Run `npm.cmd run lint -- --max-warnings=0`, `npx.cmd tsc --noEmit --pretty
   false`, and `npm.cmd run build` before deployment.
