@@ -19,7 +19,9 @@ export type BasicAuthAccountSummary = {
 
 export const WIREGENE_ADMIN_SITE_IDS = [
   "portal",
+  "homepage",
   "homepage-admin",
+  "agi",
   "omni",
   "protocol",
   "search",
@@ -27,21 +29,29 @@ export const WIREGENE_ADMIN_SITE_IDS = [
   "finance",
   "music",
   "hyunlab",
+  "lab-homepage",
   "sci-experiment",
   "behavior",
+  "behavior-ai",
   "human",
+  "diabetic-foot",
 ];
 
 const WIREGENE_SITE_ID_SET = new Set(WIREGENE_ADMIN_SITE_IDS);
 const WIREGENE_SITE_ID_ALIASES: Record<string, string> = {
   arim: "human",
+  "agi.wiregene.com": "agi",
   "admin.wiregene.com": "homepage-admin",
-  homepage: "homepage-admin",
+  homepage: "homepage",
+  "www.wiregene.com": "homepage",
   "www-admin": "homepage-admin",
   "www.wiregene.com/admin": "homepage-admin",
+  "hyun.wiregene.com": "lab-homepage",
   "finance.wiregene.com": "finance",
   "music.wiregene.com": "music",
+  "sci-bbb-ai.wiregene.com": "behavior-ai",
   "sci-bbb": "behavior",
+  "dmfoot.wiregene.com": "diabetic-foot",
 };
 const RESERVED_NON_ADMIN_USERNAMES = new Set(["wiregene"]);
 

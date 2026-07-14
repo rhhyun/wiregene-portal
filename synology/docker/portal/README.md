@@ -18,21 +18,18 @@ The default service listens on host port `3002`.
 Use this when `rhhyun` must be added without manually editing every `.env`:
 
 ```sh
-cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && IDENTITY_PASSWORD='<provided master password>' /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
 ```
 
-The script keeps existing `wiregene` credentials scoped to `search`, adds
-`rhhyun` to `APP_BASIC_AUTH_USERS`, marks `rhhyun` as an admin, shares
+The script keeps existing `wiregene` credentials scoped to `search`, upserts
+`rhhyun` in `APP_BASIC_AUTH_USERS`, marks `rhhyun` as an admin, shares
 `PORTAL_AUTH_CHECK_SECRET` / `WIREGENE_AUTH_CHECK_SECRET` with known subsite
-`.env` files, and restarts the Portal plus known compose runtimes when
-`AUTO_START=true`.
+`.env` files, configures Music's `MUSIC_AUTH_USER` and
+`MUSIC_AUTH_PASSWORD_SHA256`, and restarts the Portal plus known compose
+runtimes when `AUTO_START=true`.
 
-If no existing password can be reused, it writes the generated initial password
-only to:
-
-```text
-/volume1/docker/portal/rhhyun-initial-password.txt
-```
+The Master password is read from `IDENTITY_PASSWORD` or an existing `rhhyun`
+entry. It is not generated automatically and is not printed to logs.
 
 The log is:
 

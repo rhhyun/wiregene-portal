@@ -118,6 +118,10 @@ __STATUS__
 ## Active Work Summary
 
 - `portal.wiregene.com` is the Wiregene account and site launcher service.
+- The Portal first screen shows all registered user-facing Wiregene subsite
+  links before the ID/PW management panel.
+- The shared Master entry ID is `rhhyun`; the Master password must be supplied
+  at runtime with `IDENTITY_PASSWORD` and must not be stored in this file.
 - ID/PW add, delete, and change operations are managed from
   `portal.wiregene.com`; `APP_BASIC_AUTH_*` values are reserved for
   break-glass/bootstrap access.
@@ -167,7 +171,7 @@ git -C "$APP_DIR" pull --ff-only origin main
 One-time or on-demand automatic identity setup:
 
 ```sh
-cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && IDENTITY_PASSWORD='<provided master password>' /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
 ```
 
 The Synology backup writer updates this file locally. To make the updated
@@ -185,6 +189,9 @@ development machine after reviewing it.
 - `scripts/synology-auto-wiregene-identity.sh`: automatic identity/admin/shared
   auth secret setup for Portal and known subsite env files, with `wiregene`
   scoped to `search` unless explicitly changed.
+- `AUTH_RUNBOOK.md`: Portal authentication and identity propagation runbook.
+- `ERROR_LEDGER.md`: repeated auth and portal launcher errors with prevention
+  rules.
 - `scripts/synology-start-portal.sh`: Synology container build/restart helper.
 - `synology/docker/portal/.env.example`: runtime environment template.
 - `src/lib/version.ts`: visible application version.

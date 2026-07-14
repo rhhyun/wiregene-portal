@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-06-24 22:26:33 +09:00
+Generated: 2026-07-15 00:00:00 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,8 +11,8 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: 0f8590c Restrict member ID creation to admins
-- App version: Ver 1.68
+- Latest known upstream commit before this update: 9aa532b Summary
+- App version: Ver 1.72
 
 ## Git Status At Generation
 
@@ -25,6 +25,10 @@ Env-like paths and backup.md are intentionally omitted from this section.
 ## Active Work Summary
 
 - `portal.wiregene.com` is the Wiregene account and site launcher service.
+- The Portal first screen shows all registered user-facing Wiregene subsite
+  links before the ID/PW management panel.
+- The shared Master entry ID is `rhhyun`; the Master password must be supplied
+  at runtime with `IDENTITY_PASSWORD` and must not be stored in this file.
 - ID/PW add, delete, and change operations are managed from
   `portal.wiregene.com`; `APP_BASIC_AUTH_*` values are reserved for
   break-glass/bootstrap access.
@@ -74,7 +78,7 @@ git -C "$APP_DIR" pull --ff-only origin main
 One-time or on-demand automatic identity setup:
 
 ```sh
-cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && IDENTITY_PASSWORD='<provided master password>' /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
 ```
 
 The Synology backup writer updates this file locally. To make the updated
@@ -89,9 +93,12 @@ development machine after reviewing it.
 - `docs/synology-meta-portal-split.md`: transition NAS layout and scheduler notes.
 - `scripts/synology-update-portal.sh`: full Synology update, build, restart,
   local health check, version check, and public route check.
-- `scripts/synology-auto-wiregene-identity.sh`: automatic identity/admin/shared
-  auth secret setup for Portal and known subsite env files, with `wiregene`
-  scoped to `search` unless explicitly changed.
+- `scripts/synology-auto-wiregene-identity.sh`: automatic `rhhyun` identity,
+  admin, shared auth secret, known subsite env sync, Music auth hash sync, and
+  restart helper, with `wiregene` scoped to `search` unless explicitly changed.
+- `AUTH_RUNBOOK.md`: Portal authentication and identity propagation runbook.
+- `ERROR_LEDGER.md`: repeated auth and portal launcher errors with prevention
+  rules.
 - `scripts/synology-start-portal.sh`: Synology container build/restart helper.
 - `synology/docker/portal/.env.example`: runtime environment template.
 - `src/lib/version.ts`: visible application version.
@@ -528,4 +535,31 @@ Change:
   `PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP=false`, and
   `PORTAL_ALLOW_VERCEL_GOOGLE_DRIVE_PRIMARY=false`. Synology remains the
   long-term `local-json` source of truth; Google Drive is backup-only.
+- 2026-07-15: First-screen Portal layout now prioritizes all registered
+  user-facing Wiregene subsite links before ID/PW management, including the
+  existing Finance and Music entries. Added AGI, Homepage, Homepage Admin, Hyun
+  Lab Homepage, SCI BBB AI alias, and Diabetic Foot Screening to the Portal
+  site registry and admin site permission list.
+- 2026-07-15: Master entry policy is fixed to ID `rhhyun`; the password is not
+  stored in Git or backup files. On Synology, pass the provided Master PW at
+  runtime with `IDENTITY_PASSWORD='<provided master password>'` when running
+  `scripts/synology-auto-wiregene-identity.sh`.
+- 2026-07-15: `scripts/synology-auto-wiregene-identity.sh` now upserts existing
+  `rhhyun` entries in `APP_BASIC_AUTH_USERS` and ARIM professor accounts, so a
+  stale previous password is replaced instead of being silently kept.
+- 2026-07-15: During local verification, comma-delimited auth parsing was found
+  to miss the final entry when the value had no trailing newline. Fixed the
+  parser so `rhhyun` is replaced instead of duplicated; verified with
+  `identity_upsert_test=passed` using a test password only.
+- 2026-07-15: Music auth synchronization was added. The identity script writes
+  `MUSIC_AUTH_USER=rhhyun`, `MUSIC_AUTH_PASSWORD_SHA256=<sha256 of runtime
+  password>`, and an existing or generated `MUSIC_AUTH_SECRET` for Music env
+  files.
+- 2026-07-15: Version-up status: yes. The visible Portal app version was bumped
+  from `Ver 1.71` to `Ver 1.72` for the first-screen site launcher and Master
+  identity propagation update.
+- 2026-07-15: DSM Task Scheduler update command remains
+  `cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh`.
+  Run the identity command separately whenever the Master PW changes or a new
+  subsite env file must be synchronized.
 <!-- MANUAL-NOTES-END -->

@@ -28,6 +28,18 @@ WIREGENE_ADMIN_EMAILS=admin@example.com
 Use `APP_BASIC_AUTH_USER`/`APP_BASIC_AUTH_PASSWORD` or
 `APP_BASIC_AUTH_USERS` for the actual login secret. Do not commit the password.
 
+## Connected Sites
+
+The Portal first screen shows the site launcher before account management. The
+current user-facing registry is maintained in `src/lib/portal-accounts.ts` and
+includes Portal, Homepage, Homepage Admin, AGI, Search, Omni, Protocol, Meta,
+Finance, Music, HyunLab, Hyun Lab Homepage, SCI Experiment, SCI BBB AI, ARIM
+Human, and Diabetic Foot Screening.
+
+The shared Master entry ID is `rhhyun`. Supply the Master password only at
+runtime through `IDENTITY_PASSWORD`; do not store it in source, docs, or
+`backup.md`.
+
 ## Deployment
 
 Use the Synology Docker package in:
@@ -48,7 +60,7 @@ cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh 
 Automatic identity setup for `rhhyun`:
 
 ```text
-cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
+cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && IDENTITY_PASSWORD='<provided master password>' /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
 ```
 
 ## Boundary Rules

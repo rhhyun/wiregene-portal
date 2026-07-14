@@ -6,9 +6,8 @@ PORTAL_SOURCE_DIR="${PORTAL_SOURCE_DIR:-$BASE_DIR/wiregene-portal}"
 PORTAL_RUNTIME_DIR="${PORTAL_RUNTIME_DIR:-$BASE_DIR/portal}"
 PORTAL_REPO_URL="${PORTAL_REPO_URL:-https://github.com/rhhyun/wiregene-portal.git}"
 IDENTITY_USERNAME="${IDENTITY_USERNAME:-rhhyun}"
-REFERENCE_USERNAME="${REFERENCE_USERNAME:-wiregene}"
+LEGACY_SEARCH_USERNAME="${LEGACY_SEARCH_USERNAME:-wiregene}"
 PORTAL_AUTH_CHECK_URL="${PORTAL_AUTH_CHECK_URL:-https://portal.wiregene.com/api/auth/check}"
-PASSWORD_FILE="${PASSWORD_FILE:-$PORTAL_RUNTIME_DIR/${IDENTITY_USERNAME}-initial-password.txt}"
 AUTO_START="${AUTO_START:-true}"
 
 LOG_DIR="${PORTAL_RUNTIME_DIR}/logs"
@@ -132,27 +131,27 @@ write_env_value() {
   key="$2"
   value="$3"
   tmp="${file}.tmp.$$"
-  found="false"
 
   mkdir -p "$(dirname "$file")"
   [ -f "$file" ] || : > "$file"
 
-  while IFS= read -r line || [ -n "$line" ]; do
-    clean_line=$(printf "%s" "$line" | sed "s/\r$//")
-    case "$clean_line" in
-      "$key="* | "export $key="*)
-        printf "%s=%s\n" "$key" "$value" >> "$tmp"
-        found="true"
-        ;;
-      *)
-        printf "%s\n" "$clean_line" >> "$tmp"
-        ;;
-    esac
-  done < "$file"
-
-  if [ "$found" != "true" ]; then
-    printf "%s=%s\n" "$key" "$value" >> "$tmp"
-  fi
+  awk -v key="$key" -v value="$value" '
+    BEGIN { found = 0 }
+    {
+      sub(/\r$/, "", $0)
+      if ($0 ~ "^" key "=" || $0 ~ "^export[[:space:]]+" key "=") {
+        print key "=" value
+        found = 1
+      } else {
+        print
+      }
+    }
+    END {
+      if (!found) {
+        print key "=" value
+      }
+    }
+  ' "$file" > "$tmp"
 
   mv "$tmp" "$file"
   chmod 600 "$file" 2>/dev/null || true
@@ -221,27 +220,48 @@ remove_csv_value() {
 auth_users_has_user() {
   users="$1"
   username="$2"
-  printf "%s" "$users" | tr ',' '\n' | while IFS= read -r entry; do
-    entry_username=$(printf "%s" "$entry" | sed 's/:.*$//' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    if [ "$entry_username" = "$username" ]; then
-      printf "yes\n"
-      exit 0
-    fi
-  done | grep -q '^yes$'
+  printf "%s" "$users" | tr ',' '\n' | awk -v user="$username" '
+    {
+      entry_user = $0
+      sub(/:.*/, "", entry_user)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", entry_user)
+      if (entry_user == user) {
+        found = 1
+      }
+    }
+    END { exit found ? 0 : 1 }
+  '
 }
 
-add_auth_user() {
+upsert_auth_user() {
   file="$1"
   username="$2"
   password="$3"
   current=$(read_env_value "$file" "APP_BASIC_AUTH_USERS")
-
-  if auth_users_has_user "$current" "$username"; then
-    return
-  fi
-
   entry="${username}:${password}"
-  if [ -n "$current" ]; then
+
+  if [ -n "$current" ] && auth_users_has_user "$current" "$username"; then
+    next=$(printf "%s" "$current" | tr ',' '\n' | awk -v user="$username" -v replacement="$entry" '
+      BEGIN { first = 1 }
+      {
+        raw = $0
+        split(raw, parts, ":")
+        entry_user = parts[1]
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", entry_user)
+        if (entry_user == user) {
+          raw = replacement
+        }
+        if (raw != "") {
+          if (!first) {
+            printf ","
+          }
+          printf "%s", raw
+          first = 0
+        }
+      }
+    ')
+    write_env_value "$file" "APP_BASIC_AUTH_USERS" "$next"
+  elif [ -n "$current" ]; then
     write_env_value "$file" "APP_BASIC_AUTH_USERS" "$current,$entry"
   else
     write_env_value "$file" "APP_BASIC_AUTH_USERS" "$entry"
@@ -268,8 +288,19 @@ generate_secret() {
   random_hex 32
 }
 
-generate_password() {
-  printf "Wg-%s\n" "$(random_hex 12)"
+sha256_hex() {
+  value="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    printf "%s" "$value" | sha256sum | awk '{print $1}'
+    return
+  fi
+
+  if command -v openssl >/dev/null 2>&1; then
+    printf "%s" "$value" | openssl dgst -sha256 -hex | awk '{print $NF}'
+    return
+  fi
+
+  fail "No SHA-256 tool found. Install coreutils sha256sum or openssl."
 }
 
 env_file_candidates() {
@@ -279,12 +310,23 @@ env_file_candidates() {
     "$BASE_DIR/search/.env" \
     "$BASE_DIR/omni/.env" \
     "$BASE_DIR/protocol/.env" \
+    "$BASE_DIR/agi/.env" \
+    "$BASE_DIR/AGI/.env" \
+    "$BASE_DIR/finance/.env" \
+    "$BASE_DIR/finance-wiregene/.env" \
+    "$BASE_DIR/wiregene-finance/.env" \
+    "$BASE_DIR/music/.env" \
+    "$BASE_DIR/music-wiregene/.env" \
+    "$BASE_DIR/music-wiregene/.env.production" \
     "$BASE_DIR/research-briefing/.env" \
     "$BASE_DIR/research-briefing-platform/.env" \
     "$BASE_DIR/research-briefing-platform/.env.local" \
     "$BASE_DIR/research-briefing-platform/.env.production" \
     "$BASE_DIR/arim-app/.env" \
     "$BASE_DIR/arim/.env" \
+    "$BASE_DIR/dmfoot/.env" \
+    "$BASE_DIR/diabetic-foot/.env" \
+    "$BASE_DIR/Diabetic-foot_Screening-Wiregene-demo/.env" \
     "$BASE_DIR/sci-bbb/.env" \
     "$BASE_DIR/sci-experiment/.env" \
     "$BASE_DIR/hyunlab-wiregene-platform/.env" \
@@ -318,14 +360,21 @@ find_password_for_user_in_file() {
   fi
 
   users=$(read_env_value "$file" "APP_BASIC_AUTH_USERS")
-  printf "%s" "$users" | tr ',' '\n' | while IFS= read -r entry; do
-    entry_username=$(printf "%s" "$entry" | sed 's/:.*$//' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    entry_password=$(printf "%s" "$entry" | sed 's/^[^:]*://')
-    if [ "$entry_username" = "$username" ] && [ -n "$entry_password" ]; then
-      printf "%s\n" "$entry_password"
-      exit 0
-    fi
-  done | head -n 1
+  printf "%s" "$users" | tr ',' '\n' | awk -v user="$username" '
+    {
+      raw = $0
+      entry_user = raw
+      sub(/:.*/, "", entry_user)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", entry_user)
+      if (entry_user == user) {
+        sub(/^[^:]*:/, "", raw)
+        if (raw != "") {
+          print raw
+          exit
+        }
+      }
+    }
+  '
 }
 
 choose_identity_password() {
@@ -342,26 +391,7 @@ choose_identity_password() {
     fi
   done
 
-  for file in $(unique_env_files); do
-    password=$(find_password_for_user_in_file "$file" "$REFERENCE_USERNAME")
-    if [ -n "$password" ]; then
-      log "Using existing $REFERENCE_USERNAME password for $IDENTITY_USERNAME without printing it."
-      printf "%s\n" "$password"
-      return
-    fi
-  done
-
-  generated=$(generate_password)
-  mkdir -p "$(dirname "$PASSWORD_FILE")"
-  umask 077
-  {
-    printf "username=%s\n" "$IDENTITY_USERNAME"
-    printf "password=%s\n" "$generated"
-    printf "created_at=%s\n" "$(date '+%Y-%m-%d %H:%M:%S')"
-  } > "$PASSWORD_FILE"
-  chmod 600 "$PASSWORD_FILE" 2>/dev/null || true
-  log "Generated initial password for $IDENTITY_USERNAME and stored it at $PASSWORD_FILE."
-  printf "%s\n" "$generated"
+  fail "No fixed password found for $IDENTITY_USERNAME. Re-run with IDENTITY_PASSWORD set, or configure $IDENTITY_USERNAME in an existing .env first. The password is not stored in Git or logs."
 }
 
 choose_shared_secret() {
@@ -419,11 +449,11 @@ configure_env_file() {
 
   cp -p "$file" "$file.bak.$(date '+%Y%m%d%H%M%S')" 2>/dev/null || true
 
-  add_auth_user "$file" "$IDENTITY_USERNAME" "$identity_password"
-  ensure_env_value "$file" "APP_BASIC_AUTH_SITE_ACCESS" "${REFERENCE_USERNAME}=search"
-  remove_csv_value "$file" "WIREGENE_ADMIN_EMAILS" "$REFERENCE_USERNAME"
-  remove_csv_value "$file" "APP_ADMIN_USERS" "$REFERENCE_USERNAME"
-  remove_csv_value "$file" "APP_ADMIN_USER" "$REFERENCE_USERNAME"
+  upsert_auth_user "$file" "$IDENTITY_USERNAME" "$identity_password"
+  ensure_env_value "$file" "APP_BASIC_AUTH_SITE_ACCESS" "${LEGACY_SEARCH_USERNAME}=search"
+  remove_csv_value "$file" "WIREGENE_ADMIN_EMAILS" "$LEGACY_SEARCH_USERNAME"
+  remove_csv_value "$file" "APP_ADMIN_USERS" "$LEGACY_SEARCH_USERNAME"
+  remove_csv_value "$file" "APP_ADMIN_USER" "$LEGACY_SEARCH_USERNAME"
   append_csv_value "$file" "WIREGENE_ADMIN_EMAILS" "$IDENTITY_USERNAME"
   write_env_value "$file" "PORTAL_AUTH_CHECK_SECRET" "$shared_secret"
   write_env_value "$file" "WIREGENE_AUTH_CHECK_SECRET" "$shared_secret"
@@ -451,6 +481,17 @@ configure_env_file() {
     add_arim_professor_account "$file" "$IDENTITY_USERNAME" "$identity_password"
   fi
 
+  case "$file" in
+    *music-wiregene* | *"/music/"* | *"/music."*)
+      write_env_value "$file" "MUSIC_AUTH_USER" "$IDENTITY_USERNAME"
+      write_env_value "$file" "MUSIC_AUTH_PASSWORD_SHA256" "$(sha256_hex "$identity_password")"
+      if [ -z "$(read_env_value "$file" "MUSIC_AUTH_SECRET")" ]; then
+        write_env_value "$file" "MUSIC_AUTH_SECRET" "$(generate_secret)"
+      fi
+      log "Configured Music auth settings in $file"
+      ;;
+  esac
+
   log "Configured identity/auth settings in $file"
 }
 
@@ -460,12 +501,29 @@ add_arim_professor_account() {
   password="$3"
   current=$(read_env_value "$file" "ARIM_PROFESSOR_ACCOUNTS")
 
-  if auth_users_has_user "$current" "$username"; then
-    return
-  fi
-
   entry="${username}:${password}"
-  if [ -n "$current" ]; then
+  if [ -n "$current" ] && auth_users_has_user "$current" "$username"; then
+    next=$(printf "%s" "$current" | tr ',' '\n' | awk -v user="$username" -v replacement="$entry" '
+      BEGIN { first = 1 }
+      {
+        raw = $0
+        split(raw, parts, ":")
+        entry_user = parts[1]
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", entry_user)
+        if (entry_user == user) {
+          raw = replacement
+        }
+        if (raw != "") {
+          if (!first) {
+            printf ","
+          }
+          printf "%s", raw
+          first = 0
+        }
+      }
+    ')
+    write_env_value "$file" "ARIM_PROFESSOR_ACCOUNTS" "$next"
+  elif [ -n "$current" ]; then
     write_env_value "$file" "ARIM_PROFESSOR_ACCOUNTS" "$current,$entry"
   else
     write_env_value "$file" "ARIM_PROFESSOR_ACCOUNTS" "$entry"
@@ -482,7 +540,17 @@ restart_known_services() {
     /bin/sh "$PORTAL_SOURCE_DIR/scripts/synology-start-portal.sh"
   fi
 
-  for runtime in "$BASE_DIR/meta" "$BASE_DIR/search" "$BASE_DIR/research-briefing"; do
+  for runtime in \
+    "$BASE_DIR/meta" \
+    "$BASE_DIR/search" \
+    "$BASE_DIR/research-briefing" \
+    "$BASE_DIR/agi" \
+    "$BASE_DIR/finance" \
+    "$BASE_DIR/finance-wiregene" \
+    "$BASE_DIR/music" \
+    "$BASE_DIR/music-wiregene" \
+    "$BASE_DIR/dmfoot" \
+    "$BASE_DIR/diabetic-foot"; do
     if [ -f "$runtime/docker-compose.yml" ] && [ -f "$runtime/.env" ]; then
       log "Restarting compose runtime at $runtime."
       compose_up "$runtime/docker-compose.yml" "$runtime/.env" || log "WARNING: compose restart failed for $runtime."
@@ -509,9 +577,6 @@ main() {
 
   log "Wiregene identity auto-configuration finished."
   log "Configured username: $IDENTITY_USERNAME"
-  if [ -f "$PASSWORD_FILE" ]; then
-    log "Initial generated password is stored at $PASSWORD_FILE"
-  fi
 }
 
 main "$@"
