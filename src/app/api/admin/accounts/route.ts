@@ -58,7 +58,10 @@ export async function GET(request: Request) {
       siteCredentials,
       siteCredentialLists: buildSiteCredentialLists(siteCredentials),
       siteCredentialCount: siteCredentials.length,
-      managedBy: mode === "portal" ? "Portal account storage + Vercel Basic Auth" : "Vercel Environment Variables",
+      managedBy:
+        mode === "portal"
+          ? "Synology Portal account storage + bootstrap environment auth"
+          : "Environment Variables",
       writable: mode === "portal" && storageWriteReadiness.writable && !portalAccountStorageError,
       portalAccountStorageError,
       portalAccountStorageWarning: storageWriteReadiness.details,

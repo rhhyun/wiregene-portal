@@ -7,10 +7,12 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/verify-portal-runtime-policy.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "verify:grants": "node scripts/verify-grant-storage-apis.mjs",
+    "verify:portal-runtime": "node scripts/verify-portal-runtime-policy-tests.mjs",
     "briefing:generate": "npx tsx src/lib/github-briefing-runner.ts",
     "briefing:generate:synology": "npx tsx src/lib/synology-briefing-runner.ts",
     "check:google-drive-config": "tsx scripts/check-google-drive-config.ts",

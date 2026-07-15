@@ -46,3 +46,39 @@ npm.cmd run build
   - `src/lib/portal-accounts.ts`
   - `src/lib/basic-auth-users.ts`
   - `src/components/PortalDashboard.tsx`
+
+## WG-PORTAL-PUBLIC-ROUTE-VERCEL-READONLY
+
+- Date: 2026-07-15
+- Symptom: Portal member management shows zero accounts and reports that ID
+  creation is unavailable because `portal.wiregene.com` is running on Vercel.
+- Root cause: Public DNS pointed `portal.wiregene.com` to Vercel
+  `76.76.21.21`. The Synology scheduler detected Vercel headers but its legacy
+  default `PUBLIC_PORTAL_ROUTE_POLICY=warn` still returned success.
+- Correct fix: Route the public hostname through the existing Cloudflare
+  Tunnel or DSM reverse proxy to Synology port `3002`, keep account storage on
+  Synology `local-json`, and remove the Vercel production alias only after the
+  Synology route is verified.
+- Prevention rule: Synology route verification is fail-closed. Legacy `warn`
+  is treated as `synology`, and Portal Vercel builds fail unless the explicit
+  emergency variable `PORTAL_ALLOW_VERCEL_EMERGENCY_DEPLOY=true` is set.
+  `SKIP_PUBLIC_PORTAL_ROUTE_CHECK=1` is rejected, and container startup probes
+  the mounted account directory with create, rename, and delete operations.
+- Verification commands:
+
+```sh
+npm.cmd run verify:portal-runtime
+/bin/sh -n scripts/synology-update-portal.sh
+sh scripts/verify-synology-route-policy.sh
+curl -I https://portal.wiregene.com/
+```
+
+  The final response must not contain `Server: Vercel` or `X-Vercel-Id`.
+- Affected files:
+  - `scripts/synology-update-portal.sh`
+  - `scripts/synology-auto-wiregene-identity.sh`
+  - `scripts/verify-portal-runtime-policy.mjs`
+  - `.env.example`
+  - `synology/docker/portal/.env.example`
+  - `AUTH_RUNBOOK.md`
+  - `backup.md`

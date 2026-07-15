@@ -73,12 +73,12 @@ git -C ..\wiregene-portal push -u origin main
 
 ## Vercel
 
-After GitHub repositories exist, connect Vercel projects this way:
+After GitHub repositories exist, connect only the serverless services to Vercel:
 
 ```text
 research-briefing-platform -> rhhyun/research-briefing-platform
 wiregene-meta-analysis     -> rhhyun/wiregene-meta-analysis
-wiregene-portal            -> rhhyun/wiregene-portal
+wiregene-portal            -> Synology Docker only
 ```
 
 Required production environment values:
@@ -111,12 +111,12 @@ portal.wiregene.com -> wiregene-portal
 ```
 
 If a search deployment reclaims `meta.wiregene.com` or `portal.wiregene.com`,
-remove those domains from the search project in the Vercel dashboard and attach
-them only to the dedicated projects. DNS remains:
+remove those domains from the search project. Meta may use its dedicated Vercel
+project; Portal must route to Synology:
 
 ```text
 A meta.wiregene.com   76.76.21.21
-A portal.wiregene.com 76.76.21.21
+portal.wiregene.com   Cloudflare Tunnel or DSM reverse proxy -> Synology:3002
 ```
 
 ## Synology

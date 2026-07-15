@@ -14,10 +14,7 @@ The source code still lives in the shared Next.js app under `src/`.
 
 ## Runtime Mode
 
-For the shared Vercel project, leave `WIREGENE_APP_MODE` empty. The app
-detects `portal.wiregene.com` from the request host.
-
-For a separate Docker or Vercel project, set:
+For the Synology Docker project, set:
 
 ```text
 WIREGENE_APP_MODE=portal
@@ -50,6 +47,11 @@ synology/docker/portal
 
 The Docker package mounts the shared source directory and starts the same app
 with `WIREGENE_APP_MODE=portal`.
+
+Portal Vercel builds fail by default because member management requires the
+Synology persistent `local-json` volume. A time-boxed read-only emergency build
+requires `PORTAL_ALLOW_VERCEL_EMERGENCY_DEPLOY=true`; it is not a production
+account-management runtime.
 
 DSM Task Scheduler boot-time/update command:
 

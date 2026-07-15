@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-07-15 00:00:00 +09:00
+Generated: 2026-07-15 15:52:49 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,15 +11,36 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known upstream commit before this update: 9aa532b Summary
-- App version: Ver 1.72
+- Latest known commit: fcaac7b Add portal site launcher and master identity sync
+- App version: Ver 1.73
 
 ## Git Status At Generation
 
 Env-like paths and backup.md are intentionally omitted from this section.
 
 ```text
-(clean after omitting env-like paths and backup.md)
+ M AUTH_RUNBOOK.md
+ M ERROR_LEDGER.md
+ M SERVICE.md
+ M docs/deployment-ko.md
+ M docs/portal-google-drive-oauth-repair-ko.md
+ M docs/wiregene-service-repo-split.md
+ M package.json
+ M portal/README.md
+ M scripts/repair-portal-google-drive-oauth.ps1
+ M scripts/synology-auto-wiregene-identity.sh
+ M scripts/synology-start-portal.sh
+ M scripts/synology-update-portal.sh
+ M scripts/synology-write-backup-md.sh
+ M scripts/vercel-configure-portal-google-drive.ps1
+ M scripts/write-backup-md.ps1
+ M src/app/api/admin/accounts/route.ts
+ M src/components/AccountManagementPanel.tsx
+ M src/lib/version.ts
+ M synology/docker/portal/README.md
+?? scripts/verify-portal-runtime-policy-tests.mjs
+?? scripts/verify-portal-runtime-policy.mjs
+?? scripts/verify-synology-route-policy.sh
 ```
 
 ## Active Work Summary
@@ -39,8 +60,13 @@ Env-like paths and backup.md are intentionally omitted from this section.
   access and must not be the long-term ID/PW source of truth.
 - The Synology update script checks local container readiness, rendered version,
   and whether the public portal host is still returning Vercel headers. The
-  public route check warns by default and only fails when
-  `PUBLIC_PORTAL_ROUTE_POLICY=synology`.
+  production default is fail-closed with `PUBLIC_PORTAL_ROUTE_POLICY=synology`;
+  legacy `warn` is also enforced as `synology`.
+- Portal Vercel builds are blocked unless the time-boxed emergency override
+  `PORTAL_ALLOW_VERCEL_EMERGENCY_DEPLOY=true` is explicitly set. Emergency
+  Vercel mode keeps member management read-only.
+- `SKIP_PUBLIC_PORTAL_ROUTE_CHECK=1` is rejected, and Synology startup probes
+  the mounted account directory with create, rename, and delete operations.
 - Synology source checkout: `/volume1/docker/wiregene-portal`.
 - Synology runtime folder: `/volume1/docker/portal`.
 - This backup file can be regenerated at the end of each work session.
@@ -93,9 +119,9 @@ development machine after reviewing it.
 - `docs/synology-meta-portal-split.md`: transition NAS layout and scheduler notes.
 - `scripts/synology-update-portal.sh`: full Synology update, build, restart,
   local health check, version check, and public route check.
-- `scripts/synology-auto-wiregene-identity.sh`: automatic `rhhyun` identity,
-  admin, shared auth secret, known subsite env sync, Music auth hash sync, and
-  restart helper, with `wiregene` scoped to `search` unless explicitly changed.
+- `scripts/synology-auto-wiregene-identity.sh`: automatic identity/admin/shared
+  auth secret setup for Portal and known subsite env files, with `wiregene`
+  scoped to `search` unless explicitly changed.
 - `AUTH_RUNBOOK.md`: Portal authentication and identity propagation runbook.
 - `ERROR_LEDGER.md`: repeated auth and portal launcher errors with prevention
   rules.
@@ -106,6 +132,8 @@ development machine after reviewing it.
 ## Verification Checklist
 
 - `npm.cmd run lint -- --max-warnings=0`
+- `npm.cmd run verify:portal-runtime`
+- `sh scripts/verify-synology-route-policy.sh`
 - `npx.cmd tsc --noEmit --pretty false --incremental false`
 - `npm.cmd run build`
 - On Synology, syntax-check shell scripts with `sh -n scripts/<name>.sh`.
@@ -143,12 +171,12 @@ Current production route issue as of 2026-06-12:
 - Synology scheduler command:
   `cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh`
 - Synology public route policy:
-  `PUBLIC_PORTAL_ROUTE_POLICY=warn` lets Synology updates finish when the
-  public host is intentionally still Vercel; `PUBLIC_PORTAL_ROUTE_POLICY=synology`
-  makes the scheduler fail if Vercel headers remain.
+  `PUBLIC_PORTAL_ROUTE_POLICY=synology` is mandatory. The retired value `warn`
+  is treated as strict Synology mode; only `vercel-emergency` is an explicit
+  temporary break-glass value and keeps member management read-only.
 - Vercel Portal Google Drive OAuth repair command after exact Google Cloud
-  OAuth values are known:
-  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\repair-portal-google-drive-oauth.ps1`
+  OAuth values are known and a time-boxed emergency has been approved:
+  `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\repair-portal-google-drive-oauth.ps1 -AllowEmergencyVercelPrimary`
 - Portal refresh token generation command after a new Google OAuth Client ID
   and Client Secret are created:
   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\get-portal-google-drive-refresh-token.ps1`
@@ -396,7 +424,7 @@ Change:
 - Preserved the new member-management UI while hiding the legacy Portal subsite
   credential create/change/delete controls behind
   `PORTAL_ENABLE_LEGACY_SITE_CREDENTIALS=true`.
-- The subsite credential list now functions as "서브사이트 계정 관리 위치"
+- The subsite credential list now functions as "??類λ땹???????ｌ뫒????㉱???熬곣뫚??
   and opens each site's own account-management location.
 - API writes for legacy `site-credential` operations now return
   `SUBSITE_CREDENTIALS_DELEGATED` unless legacy mode is deliberately enabled.
@@ -409,7 +437,7 @@ Change:
 
 Decision:
 
-- `회원관리` is visible and usable only to full administrators.
+- `??????㉱?? is visible and usable only to full administrators.
 - Member ID creation is deliberately simple: ID, initial PW, and
   email/contact.
 - Newly created member accounts are always `user` role accounts, not full
@@ -562,4 +590,37 @@ Change:
   `cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh`.
   Run the identity command separately whenever the Master PW changes or a new
   subsite env file must be synchronized.
+- 2026-07-15: Production route incident confirmed. `portal.wiregene.com`
+  resolved to Vercel `76.76.21.21` and returned `Server: Vercel` plus
+  `X-Vercel-Id`; therefore the Portal account store was correctly forced into
+  read-only mode and ID creation could not work.
+- 2026-07-15: Hardened the route policy for Ver 1.73. The Synology scheduler
+  now defaults to `PUBLIC_PORTAL_ROUTE_POLICY=synology`, treats legacy `warn`
+  as strict Synology mode, and fails when public headers cannot be verified or
+  still identify Vercel. Only the explicit break-glass value
+  `vercel-emergency` may continue, with member management read-only.
+- 2026-07-15: Added a Vercel build guard. Builds for the Portal repository or
+  `WIREGENE_APP_MODE=portal` fail unless the temporary emergency variable
+  `PORTAL_ALLOW_VERCEL_EMERGENCY_DEPLOY=true` is deliberately set.
+- 2026-07-15: The remaining production cutover is a Cloudflare operation:
+  create or update the existing Tunnel public hostname
+  `portal.wiregene.com -> http://<Synology-address>:3002` (or use the verified
+  DSM reverse-proxy origin), then confirm the public response has no Vercel
+  headers before removing the Vercel alias. The origin address must be copied
+  from a working Synology Tunnel route, not guessed from public DNS.
+- 2026-07-15: Verification for this hardening includes
+  `npm.cmd run verify:portal-runtime`, shell syntax checks, lint, typecheck,
+  build, and a final public header check. Until Cloudflare routing is changed,
+  the final header check is expected to remain an external deployment blocker.
+- 2026-07-15: Completed local verification: ESLint passed with zero warnings,
+  TypeScript `--noEmit` passed, Next.js production build passed,
+  `portal_runtime_policy_tests=passed`, and
+  `synology_route_policy_tests=passed`. A fake local Vercel runtime returned
+  `runtime=vercel`, `backend=local-json`, `writable=false`, and
+  `SERVERLESS_LOCAL_STORAGE`, while rendering `Ver 1.73`.
+- 2026-07-15: NAS automation from this PC was unavailable: the SMB path
+  `\\synology\docker` was not connected and the hostname `synology` did not
+  resolve for SSH. No DNS or Vercel alias was removed because the Synology
+  Tunnel origin could not be verified. Public DNS still requires the planned
+  Cloudflare Tunnel cutover before Portal account creation becomes writable.
 <!-- MANUAL-NOTES-END -->

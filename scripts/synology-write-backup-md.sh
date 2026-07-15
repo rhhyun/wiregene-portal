@@ -86,8 +86,13 @@ $status
   access and must not be the long-term ID/PW source of truth.
 - The Synology update script checks local container readiness, rendered version,
   and whether the public portal host is still returning Vercel headers. The
-  public route check warns by default and only fails when
-  \`PUBLIC_PORTAL_ROUTE_POLICY=synology\`.
+  production default is fail-closed with \`PUBLIC_PORTAL_ROUTE_POLICY=synology\`;
+  legacy \`warn\` is also enforced as \`synology\`.
+- Portal Vercel builds are blocked unless the time-boxed emergency override
+  \`PORTAL_ALLOW_VERCEL_EMERGENCY_DEPLOY=true\` is explicitly set. Emergency
+  Vercel mode keeps member management read-only.
+- \`SKIP_PUBLIC_PORTAL_ROUTE_CHECK=1\` is rejected, and Synology startup probes
+  the mounted account directory with create, rename, and delete operations.
 - Synology source checkout: \`/volume1/docker/wiregene-portal\`.
 - Synology runtime folder: \`/volume1/docker/portal\`.
 - This backup file can be regenerated at the end of each work session.
@@ -153,6 +158,8 @@ development machine after reviewing it.
 ## Verification Checklist
 
 - \`npm.cmd run lint -- --max-warnings=0\`
+- \`npm.cmd run verify:portal-runtime\`
+- \`sh scripts/verify-synology-route-policy.sh\`
 - \`npx.cmd tsc --noEmit --pretty false --incremental false\`
 - \`npm.cmd run build\`
 - On Synology, syntax-check shell scripts with \`sh -n scripts/<name>.sh\`.

@@ -76,18 +76,17 @@ NCBI_API_KEY=NCBI API key
 
 ## 4-1. Wiregene 도메인 분리
 
-현재 웹 앱은 하나의 Next.js/Vercel 배포에서 접속 host에 따라 화면을 분리합니다.
+Search와 Meta는 Vercel에서 운영할 수 있지만, Portal 계정 관리는 영속적인
+`local-json` 저장소가 필요하므로 Synology에서 분리 운영합니다.
 
 ```text
-search.wiregene.com  -> Research Briefing / 연구과제 / 논문 관리
-meta.wiregene.com    -> Meta-analysis only
-portal.wiregene.com  -> Portal / ID/PW management / site launcher
+search.wiregene.com  -> Vercel Research Briefing
+meta.wiregene.com    -> Vercel Meta-analysis
+portal.wiregene.com  -> Synology Portal / ID/PW management / site launcher
 ```
 
-같은 Vercel 프로젝트에 세 도메인을 모두 연결합니다. `WIREGENE_APP_MODE`는
-단일 공용 배포에서는 비워 둡니다. 이 값을 `meta` 또는 `portal`로 강제로 넣으면
-host 기반 자동 분기가 무시됩니다. 별도 Vercel 프로젝트를 만들 때만 고정 모드로
-사용합니다.
+`portal.wiregene.com`을 Vercel 프로젝트에 연결하지 않습니다. Portal의
+`WIREGENE_APP_MODE=portal`은 Synology Docker 런타임에서만 사용합니다.
 
 Cloudflare DNS를 사용하는 경우 Vercel domain inspect가 요구하는 A 레코드를
 Cloudflare에 추가합니다.
@@ -95,7 +94,7 @@ Cloudflare에 추가합니다.
 ```text
 A search.wiregene.com  76.76.21.21
 A meta.wiregene.com    76.76.21.21
-A portal.wiregene.com  76.76.21.21
+portal.wiregene.com    Cloudflare Tunnel or DSM reverse proxy -> Synology:3002
 ```
 
 확인 명령:
@@ -144,10 +143,13 @@ GitHub Actions에서 성공하면 Google Drive의 `research-briefing-database.js
 ```powershell
 cd C:\Users\rhhyu\Documents\Portal.wiregene.com
 npm.cmd run google-drive:oauth:portal
-npm.cmd run vercel:repair-portal-google-drive
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/repair-portal-google-drive-oauth.ps1 -AllowEmergencyVercelPrimary
 ```
 
-세부 절차는 `docs/portal-google-drive-oauth-repair-ko.md`를 따릅니다. 이 스크립트는 Vercel에 쓰기 전에 Google token endpoint에서 Client ID, Client Secret, Refresh Token 조합을 먼저 검증합니다.
+세부 절차는 `docs/portal-google-drive-oauth-repair-ko.md`를 따릅니다. 이
+스위치는 시간 제한 비상 운영에만 사용하며 정상 운영에서는 실행하지 않습니다.
+스크립트는 Vercel에 쓰기 전에 Google token endpoint에서 Client ID,
+Client Secret, Refresh Token 조합을 먼저 검증합니다.
 
 `Zotero is not configured`:
 

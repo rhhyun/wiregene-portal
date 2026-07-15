@@ -101,12 +101,26 @@ verify_page_version() {
 check_public_portal_route() {
   skip_public_check="$(env_value SKIP_PUBLIC_PORTAL_ROUTE_CHECK || true)"
   if [ "${SKIP_PUBLIC_PORTAL_ROUTE_CHECK:-}" = "1" ] || [ "$skip_public_check" = "1" ]; then
-    log "Skipping public portal route check because SKIP_PUBLIC_PORTAL_ROUTE_CHECK=1."
-    return 0
+    fail "SKIP_PUBLIC_PORTAL_ROUTE_CHECK=1 is no longer supported. Use the explicit vercel-emergency policy for a temporary break-glass route."
   fi
 
   public_route_policy="$(env_value PUBLIC_PORTAL_ROUTE_POLICY || true)"
-  [ -n "$public_route_policy" ] || public_route_policy="${PUBLIC_PORTAL_ROUTE_POLICY:-warn}"
+  [ -n "$public_route_policy" ] || public_route_policy="${PUBLIC_PORTAL_ROUTE_POLICY:-synology}"
+
+  case "$public_route_policy" in
+    synology)
+      ;;
+    vercel-emergency)
+      log "WARNING: PUBLIC_PORTAL_ROUTE_POLICY=vercel-emergency permits a temporary public Vercel route. Account management remains read-only there."
+      ;;
+    warn)
+      log "WARNING: Legacy PUBLIC_PORTAL_ROUTE_POLICY=warn is no longer permissive; enforcing synology policy."
+      public_route_policy="synology"
+      ;;
+    *)
+      fail "Unsupported PUBLIC_PORTAL_ROUTE_POLICY=$public_route_policy. Use synology or the explicit break-glass value vercel-emergency."
+      ;;
+  esac
 
   public_host="$(env_value PUBLIC_PORTAL_HOST || true)"
   [ -n "$public_host" ] || public_host="${PUBLIC_PORTAL_HOST:-portal.wiregene.com}"
@@ -118,8 +132,11 @@ check_public_portal_route() {
   log "Checking public portal route at https://$public_host."
   public_headers="$(curl -k -sSI --max-time 15 "https://$public_host/" 2>&1 || true)"
   if [ -z "$public_headers" ]; then
-    log "WARNING: Could not read public portal headers for https://$public_host."
-    return 0
+    if [ "$public_route_policy" = "vercel-emergency" ]; then
+      log "WARNING: Could not read public portal headers for https://$public_host during emergency Vercel mode."
+      return 0
+    fi
+    fail "Could not read public portal headers for https://$public_host; Synology routing cannot be verified."
   fi
 
   printf "%s\n" "$public_headers" | sed -n '1,20p' | while IFS= read -r line; do
@@ -128,21 +145,19 @@ check_public_portal_route() {
 
   if printf "%s\n" "$public_headers" | grep -Eiq '^(server:[[:space:]]*Vercel|x-vercel-)'; then
     log "Public portal host https://$public_host is currently served by Vercel."
-    log "If Portal is intentionally running on Vercel, this is expected; account storage must then use a valid Google Drive OAuth configuration on the Vercel project."
+    log "Portal account management cannot write while public traffic is served by Vercel."
     log "If Portal is intended to run publicly from Synology, apply this route fix:"
     log "1. DSM Control Panel > Login Portal > Advanced > Reverse Proxy: source HTTPS $public_host:443 -> destination HTTP 127.0.0.1:3002."
     log "2. Router/firewall: forward external TCP 443 to the Synology NAS if the NAS is the public HTTPS endpoint."
     log "3. Cloudflare DNS: point $public_host to the Synology public endpoint, not Vercel 76.76.21.21."
     log "4. Only after the public header no longer contains Server: Vercel or X-Vercel-Id, remove the Vercel alias/domain binding for $public_host."
     log "5. Verify from a PC with: curl.exe -I https://$public_host/ ; the response must not contain Server: Vercel or X-Vercel-Id."
-    log "Set PUBLIC_PORTAL_ROUTE_POLICY=synology in $RUNTIME_DIR/.env if this scheduler should fail whenever the public host is still Vercel."
-
-    if [ "$public_route_policy" = "synology" ]; then
-      fail "Public portal host https://$public_host is still served by Vercel, but PUBLIC_PORTAL_ROUTE_POLICY=synology requires public Synology routing."
+    if [ "$public_route_policy" = "vercel-emergency" ]; then
+      log "WARNING: Continuing only because PUBLIC_PORTAL_ROUTE_POLICY=vercel-emergency."
+      return 0
     fi
 
-    log "Continuing because PUBLIC_PORTAL_ROUTE_POLICY=$public_route_policy. Synology local app is healthy; public browser traffic still goes to Vercel."
-    return 0
+    fail "Public portal host https://$public_host is still served by Vercel; production account management requires public Synology routing."
   fi
 
   log "Public portal route is not reporting Vercel headers."
@@ -177,5 +192,13 @@ main() {
   log_recent_container_output
   log "Wiregene Portal update completed successfully."
 }
+
+if [ "${PORTAL_ROUTE_CHECK_ONLY:-}" = "1" ]; then
+  mkdir -p "$LOG_DIR"
+  log "Wiregene Portal public route diagnostic requested."
+  check_public_portal_route
+  log "Wiregene Portal public route diagnostic passed."
+  exit 0
+fi
 
 main "$@"

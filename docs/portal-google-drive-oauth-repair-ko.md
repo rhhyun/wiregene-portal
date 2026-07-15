@@ -55,8 +55,12 @@ http://127.0.0.1:53682/oauth2callback
 방금 사용한 Client ID, Client Secret, 새 Refresh Token을 같은 실행에서 붙여넣습니다.
 
 ```powershell
-npm.cmd run vercel:repair-portal-google-drive
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/repair-portal-google-drive-oauth.ps1 -AllowEmergencyVercelPrimary
 ```
+
+이 명령은 Vercel을 시간 제한 비상 원본으로 쓰는 명시적 승인입니다. 정상
+운영에서는 실행하지 말고 Synology `local-json` 원본과 Google Drive 백업 미러를
+복구합니다.
 
 이 스크립트는 Vercel에 쓰기 전에 Google token endpoint에서 세 값의 조합을 먼저 검증합니다. 검증이 실패하면 Vercel env를 건드리지 않습니다.
 

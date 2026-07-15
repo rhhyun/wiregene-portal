@@ -87,7 +87,7 @@ CONTAINER_NAME=wiregene-portal
 
 APP_BASE_URL=https://portal.wiregene.com
 PUBLIC_PORTAL_HOST=portal.wiregene.com
-PUBLIC_PORTAL_ROUTE_POLICY=warn
+PUBLIC_PORTAL_ROUTE_POLICY=synology
 WIREGENE_APP_MODE=portal
 
 APP_BASIC_AUTH_USER=
@@ -466,7 +466,7 @@ configure_env_file() {
       write_env_value "$file" "CONTAINER_NAME" "wiregene-portal"
       write_env_value "$file" "APP_BASE_URL" "https://portal.wiregene.com"
       write_env_value "$file" "PUBLIC_PORTAL_HOST" "portal.wiregene.com"
-      write_env_value "$file" "PUBLIC_PORTAL_ROUTE_POLICY" "warn"
+      write_env_value "$file" "PUBLIC_PORTAL_ROUTE_POLICY" "synology"
       write_env_value "$file" "WIREGENE_APP_MODE" "portal"
       write_env_value "$file" "REPORT_STORAGE_BACKEND" "local-json"
       write_env_value "$file" "REPORT_STORAGE_LOCAL_PATH" ".data/portal/research-briefing-storage.json"

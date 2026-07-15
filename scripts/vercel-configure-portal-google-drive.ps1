@@ -6,10 +6,15 @@ param(
   [ValidateSet("production", "preview", "development")]
   [string]$Environment = "production",
   [switch]$UseExistingVercelGoogleDriveSecrets,
+  [switch]$AllowEmergencyVercelPrimary,
   [switch]$Redeploy
 )
 
 $ErrorActionPreference = "Stop"
+
+if (-not $AllowEmergencyVercelPrimary) {
+  throw "This command enables an emergency Vercel primary store. Re-run only for a time-boxed incident with -AllowEmergencyVercelPrimary. Production Portal storage belongs on Synology local-json."
+}
 
 function Read-DotEnvFile {
   param([string]$Path)
@@ -88,6 +93,8 @@ $envValues = [ordered]@{
   APP_BASE_URL = "https://portal.wiregene.com"
   WIREGENE_APP_MODE = "portal"
   PORTAL_ACCOUNT_STORAGE_BACKEND = "google-drive"
+  PORTAL_ALLOW_VERCEL_GOOGLE_DRIVE_PRIMARY = "true"
+  PORTAL_ALLOW_VERCEL_EMERGENCY_DEPLOY = "true"
   PORTAL_ACCOUNT_STORAGE_PATH = ".data/portal/portal-accounts.json"
   PORTAL_ACCOUNT_STORAGE_PATH_DRIVE_FILENAME = "portal-accounts.json"
 }

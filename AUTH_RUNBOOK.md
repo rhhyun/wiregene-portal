@@ -87,14 +87,33 @@ cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh 
 Run identity setup separately when the Master credential changes or a new
 subsite env file must be synchronized.
 
+`PUBLIC_PORTAL_ROUTE_POLICY=synology` is the production default. The scheduler
+fails if the public host still returns Vercel headers or if the route cannot be
+verified. The legacy value `warn` is treated as `synology`, so an old `.env`
+cannot silently bypass this check.
+
+`PUBLIC_PORTAL_ROUTE_POLICY=vercel-emergency` is the only temporary break-glass
+route policy. A Portal build on Vercel is also blocked unless
+`PORTAL_ALLOW_VERCEL_EMERGENCY_DEPLOY=true` is explicitly set. Vercel emergency
+mode is read-only for member management and must be removed after Synology
+routing is restored.
+
+`SKIP_PUBLIC_PORTAL_ROUTE_CHECK=1` is rejected. Portal Google Drive primary
+repair scripts also require the explicit PowerShell switch
+`-AllowEmergencyVercelPrimary` and set both Vercel emergency flags; they are not
+normal production deployment commands.
+
 ## Verification
 
 Local verification:
 
 ```sh
 npm.cmd run lint -- --max-warnings=0
+npm.cmd run verify:portal-runtime
 npm.cmd run build
 sh -n scripts/synology-auto-wiregene-identity.sh
+sh -n scripts/synology-update-portal.sh
+sh scripts/verify-synology-route-policy.sh
 ```
 
 Synology verification:
@@ -108,3 +127,10 @@ IDENTITY_PASSWORD='<provided master password>' /bin/sh /volume1/docker/wiregene-
 Then test `rhhyun` login on Portal and each site whose auth implementation is
 connected to `APP_BASIC_AUTH_USERS`, Portal auth check, ARIM professor accounts,
 or Music SHA-256 password auth.
+
+To check only the public route without pulling source, rebuilding, or restarting
+containers:
+
+```sh
+PORTAL_ROUTE_CHECK_ONLY=1 /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh
+```

@@ -81,6 +81,24 @@ build_app() {
   log "Wiregene Portal build completed."
 }
 
+verify_account_storage_volume() {
+  log "Verifying Portal account storage volume with create, rename, and delete operations."
+  compose_runtime run --rm --no-deps portal sh -lc '
+    set -eu
+    directory=/app/.data/portal
+    temporary="$directory/.portal-storage-probe-$$.tmp"
+    completed="$directory/.portal-storage-probe-$$.ok"
+    mkdir -p "$directory"
+    trap '\''rm -f "$temporary" "$completed"'\'' EXIT HUP INT TERM
+    printf "%s\n" "portal-storage-probe" > "$temporary"
+    mv "$temporary" "$completed"
+    test -s "$completed"
+    rm -f "$completed"
+    trap - EXIT HUP INT TERM
+  '
+  log "Portal account storage volume is writable."
+}
+
 prepare_runtime() {
   [ -f "$APP_DIR/package.json" ] || fail "Shared app checkout was not found at APP_DIR=$APP_DIR"
   [ -d "$PACKAGE_DIR" ] || fail "Synology package directory was not found: $PACKAGE_DIR"
@@ -140,6 +158,7 @@ main() {
   export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-wiregene-portal}"
   validate_compose_config
   build_app
+  verify_account_storage_volume
   log "Starting Wiregene Portal from $RUNTIME_DIR."
   compose_runtime up -d --force-recreate
   log "Wiregene Portal start requested. Check logs with: docker logs wiregene-portal"

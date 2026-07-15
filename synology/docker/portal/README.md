@@ -51,24 +51,24 @@ readiness, verifies the rendered `Ver x.y` label when Basic Auth credentials are
 available, checks whether the public `portal.wiregene.com` route is still served
 by Vercel, and writes a timestamped log under `/volume1/docker/portal/logs`.
 
-If the public route check reports Vercel headers, the local Synology container
-was updated correctly but browsers are still reaching Vercel. This is expected
-when Portal is intentionally served from Vercel with Google Drive account
-storage. In that mode, fix the Portal Vercel Google Drive OAuth values instead
-of changing Synology.
-
-To make the DSM scheduler fail whenever the public host is still Vercel, set:
+The DSM scheduler fails if the public route reports Vercel headers or cannot be
+verified. Production must use:
 
 ```text
 PUBLIC_PORTAL_ROUTE_POLICY=synology
 ```
 
-To keep Vercel as the public host while Synology is only a local/runtime copy,
-leave the default:
+The only temporary break-glass route policy is:
 
 ```text
-PUBLIC_PORTAL_ROUTE_POLICY=warn
+PUBLIC_PORTAL_ROUTE_POLICY=vercel-emergency
 ```
+
+This emergency mode leaves Portal member management read-only. The legacy
+value `warn` is treated as `synology` and no longer bypasses the route check.
+`SKIP_PUBLIC_PORTAL_ROUTE_CHECK=1` is rejected. Before the container restarts,
+the startup script verifies the mounted account directory using create, rename,
+and delete operations.
 
 The required public route is:
 

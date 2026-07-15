@@ -779,10 +779,18 @@ export function AccountManagementPanel() {
                 ? "bg-rose-50 text-rose-700"
                 : state.status === "loading"
                   ? "bg-zinc-100 text-zinc-600"
-                  : "bg-emerald-50 text-emerald-700"
+                  : state.writable
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-amber-50 text-amber-800"
             }`}
           >
-            {state.status === "error" ? "오류" : state.status === "loading" ? "확인 중" : "정상"}
+            {state.status === "error"
+              ? "오류"
+              : state.status === "loading"
+                ? "확인 중"
+                : state.writable
+                  ? "정상"
+                  : "읽기 전용"}
           </span>
         </div>
 

@@ -24,4 +24,7 @@ git remote add origin https://github.com/rhhyun/wiregene-portal.git
 git push -u origin main
 ```
 
-Set `WIREGENE_APP_MODE=portal` in Vercel and Synology.
+Set `WIREGENE_APP_MODE=portal` in Synology. Production account management is
+Synology-only because the local JSON store requires a persistent writable
+volume. Vercel builds of this Portal repository are blocked by default and are
+available only through the documented read-only emergency override.
