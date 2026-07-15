@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-07-15 15:52:49 +09:00
+Generated: 2026-07-15 16:00:16 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,7 +11,7 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: fcaac7b Add portal site launcher and master identity sync
+- Latest known commit: 8cd544c Harden Portal routing and deployment policy
 - App version: Ver 1.73
 
 ## Git Status At Generation
@@ -19,28 +19,7 @@ values in this file.
 Env-like paths and backup.md are intentionally omitted from this section.
 
 ```text
- M AUTH_RUNBOOK.md
- M ERROR_LEDGER.md
- M SERVICE.md
- M docs/deployment-ko.md
- M docs/portal-google-drive-oauth-repair-ko.md
- M docs/wiregene-service-repo-split.md
- M package.json
- M portal/README.md
- M scripts/repair-portal-google-drive-oauth.ps1
- M scripts/synology-auto-wiregene-identity.sh
- M scripts/synology-start-portal.sh
- M scripts/synology-update-portal.sh
- M scripts/synology-write-backup-md.sh
- M scripts/vercel-configure-portal-google-drive.ps1
- M scripts/write-backup-md.ps1
- M src/app/api/admin/accounts/route.ts
- M src/components/AccountManagementPanel.tsx
- M src/lib/version.ts
- M synology/docker/portal/README.md
-?? scripts/verify-portal-runtime-policy-tests.mjs
-?? scripts/verify-portal-runtime-policy.mjs
-?? scripts/verify-synology-route-policy.sh
+(clean after omitting env-like paths and backup.md)
 ```
 
 ## Active Work Summary
@@ -424,7 +403,7 @@ Change:
 - Preserved the new member-management UI while hiding the legacy Portal subsite
   credential create/change/delete controls behind
   `PORTAL_ENABLE_LEGACY_SITE_CREDENTIALS=true`.
-- The subsite credential list now functions as "??類λ땹???????ｌ뫒????㉱???熬곣뫚??
+- The subsite credential list now functions as "??筌먐삳빘???????節뚮쳮?????굿????ш끽維??
   and opens each site's own account-management location.
 - API writes for legacy `site-credential` operations now return
   `SUBSITE_CREDENTIALS_DELEGATED` unless legacy mode is deliberately enabled.
@@ -437,7 +416,7 @@ Change:
 
 Decision:
 
-- `??????㉱?? is visible and usable only to full administrators.
+- `???????굿?? is visible and usable only to full administrators.
 - Member ID creation is deliberately simple: ID, initial PW, and
   email/contact.
 - Newly created member accounts are always `user` role accounts, not full
@@ -623,4 +602,9 @@ Change:
   resolve for SSH. No DNS or Vercel alias was removed because the Synology
   Tunnel origin could not be verified. Public DNS still requires the planned
   Cloudflare Tunnel cutover before Portal account creation becomes writable.
+- 2026-07-15: GitHub push `8cd544c` triggered the connected Vercel Production
+  build, and the new prebuild guard stopped it in 5 seconds with the expected
+  `Refusing to build Wiregene Portal on Vercel` message. The previous Vercel
+  deployment remains live only as the existing read-only fallback; no new
+  Portal production build can silently replace Synology operation.
 <!-- MANUAL-NOTES-END -->
