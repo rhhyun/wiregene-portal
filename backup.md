@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-07-15 16:00:16 +09:00
+Generated: 2026-07-15 16:01:48 +09:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,7 +11,7 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Latest known commit: 8cd544c Harden Portal routing and deployment policy
+- Base commit before this backup refresh: ad8f901 Refresh Portal handoff after routing hardening
 - App version: Ver 1.73
 
 ## Git Status At Generation
@@ -19,7 +19,9 @@ values in this file.
 Env-like paths and backup.md are intentionally omitted from this section.
 
 ```text
-(clean after omitting env-like paths and backup.md)
+M ERROR_LEDGER.md
+ M scripts/synology-write-backup-md.sh
+ M scripts/write-backup-md.ps1
 ```
 
 ## Active Work Summary
@@ -403,7 +405,7 @@ Change:
 - Preserved the new member-management UI while hiding the legacy Portal subsite
   credential create/change/delete controls behind
   `PORTAL_ENABLE_LEGACY_SITE_CREDENTIALS=true`.
-- The subsite credential list now functions as "??筌먐삳빘???????節뚮쳮?????굿????ш끽維??
+- The subsite credential list now functions as "서브사이트 계정 관리 위치"
   and opens each site's own account-management location.
 - API writes for legacy `site-credential` operations now return
   `SUBSITE_CREDENTIALS_DELEGATED` unless legacy mode is deliberately enabled.
@@ -416,7 +418,7 @@ Change:
 
 Decision:
 
-- `???????굿?? is visible and usable only to full administrators.
+- `회원관리` is visible and usable only to full administrators.
 - Member ID creation is deliberately simple: ID, initial PW, and
   email/contact.
 - Newly created member accounts are always `user` role accounts, not full

@@ -82,3 +82,25 @@ curl -I https://portal.wiregene.com/
   - `synology/docker/portal/.env.example`
   - `AUTH_RUNBOOK.md`
   - `backup.md`
+
+## WG-BACKUP-WINDOWS-UTF8-MANUAL-NOTES
+
+- Date: 2026-07-15
+- Symptom: Running `scripts/write-backup-md.ps1` with Windows PowerShell 5.1
+  corrupts Korean text inside the preserved manual-notes block.
+- Root cause: `Get-Content -Raw` used the Windows PowerShell default ANSI
+  decoder even though `backup.md` is UTF-8.
+- Correct fix: Read both `backup.md` and `src/lib/version.ts` with explicit
+  `-Encoding UTF8`, while continuing to write UTF-8 without BOM.
+- Prevention rule: PowerShell backup readers and writers must always specify
+  UTF-8 explicitly; verify known Korean sentinel text after regeneration.
+- Verification command:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/write-backup-md.ps1
+rg -n "서브사이트 계정 관리 위치|회원관리" backup.md
+```
+
+- Affected files:
+  - `scripts/write-backup-md.ps1`
+  - `backup.md`

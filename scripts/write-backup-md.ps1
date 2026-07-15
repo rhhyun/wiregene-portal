@@ -33,7 +33,7 @@ function Read-CurrentVersion {
     return "unknown"
   }
 
-  $text = Get-Content -LiteralPath $versionFile -Raw
+  $text = Get-Content -LiteralPath $versionFile -Raw -Encoding UTF8
   $match = [regex]::Match($text, 'export\s+const\s+BRIEFING_VERSION\s*=\s*"([^"]+)"')
   if ($match.Success) {
     return $match.Groups[1].Value
@@ -65,7 +65,7 @@ function Get-ManualNotes {
     return "Add handoff notes here when a task has context that is not captured by git status."
   }
 
-  $text = Get-Content -LiteralPath $BackupPath -Raw
+  $text = Get-Content -LiteralPath $BackupPath -Raw -Encoding UTF8
   $match = [regex]::Match(
     $text,
     '(?s)<!-- MANUAL-NOTES-START -->\s*(.*?)\s*<!-- MANUAL-NOTES-END -->'
@@ -104,7 +104,7 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: __REMOTE__
 - Branch: __BRANCH__
-- Latest known commit: __COMMIT__
+- Base commit before this backup refresh: __COMMIT__
 - App version: Ver __VERSION__
 
 ## Git Status At Generation

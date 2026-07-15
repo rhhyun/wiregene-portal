@@ -58,7 +58,7 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: $remote
 - Branch: $branch
-- Latest known commit: $commit
+- Base commit before this backup refresh: $commit
 - App version: Ver $version
 
 ## Git Status At Generation
