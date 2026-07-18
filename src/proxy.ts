@@ -13,6 +13,10 @@ type WiregeneAppMode = ReturnType<typeof getWiregeneAppMode>;
 export async function proxy(request: NextRequest) {
   const mode = getWiregeneAppMode(request.headers.get("host"));
 
+  if (isHealthPath(request.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
+
   if (isPortalAuthCheckPath(request.nextUrl.pathname, mode)) {
     return isAuthorizedInternalAuthCheckRequest(request)
       ? NextResponse.next()
@@ -74,6 +78,10 @@ function isPathAllowedForMode(pathname: string, mode: WiregeneAppMode) {
   if (pathname.startsWith("/api/admin/")) return false;
   if (pathname.startsWith("/api/meta-analysis/")) return false;
   return true;
+}
+
+function isHealthPath(pathname: string) {
+  return pathname === "/api/health";
 }
 
 async function isPortalAccountCredentialAllowed(

@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-07-15 16:01:48 +09:00
+Generated: 2026-07-18 03:39:22 -05:00
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,8 +11,8 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Base commit before this backup refresh: ad8f901 Refresh Portal handoff after routing hardening
-- App version: Ver 1.73
+- Base commit before this backup refresh: 8eb290a Preserve UTF-8 Portal handoff notes
+- App version: Ver 1.74
 
 ## Git Status At Generation
 
@@ -39,9 +39,16 @@ M ERROR_LEDGER.md
 - Google Drive is a backup mirror only, enabled with
   `PORTAL_ACCOUNT_GOOGLE_DRIVE_BACKUP=true`. Vercel is emergency/temporary
   access and must not be the long-term ID/PW source of truth.
-- The Synology update script checks local container readiness, rendered version,
-  and whether the public portal host is still returning Vercel headers. The
-  production default is fail-closed with `PUBLIC_PORTAL_ROUTE_POLICY=synology`;
+- Synology deploy is finite and image-based. GitHub Actions builds the Portal
+  image, the NAS pulls `ghcr.io/rhhyun/wiregene-portal:latest`, then runs
+  `docker compose up -d --remove-orphans`.
+- NAS deploy scripts must not run `npm install`, `npm ci`, `npm run build`,
+  `docker compose build`, `docker logs -f`, `tail -f`, prune commands, or
+  unbounded foreground servers.
+- The Synology update script checks Docker health, `/api/health`, local root
+  HTTP `200/401`, rendered version when Basic Auth is available, and whether
+  the public portal host is still returning Vercel headers.
+- The production default is fail-closed with `PUBLIC_PORTAL_ROUTE_POLICY=synology`;
   legacy `warn` is also enforced as `synology`.
 - Portal Vercel builds are blocked unless the time-boxed emergency override
   `PORTAL_ALLOW_VERCEL_EMERGENCY_DEPLOY=true` is explicitly set. Emergency
@@ -58,6 +65,7 @@ M ERROR_LEDGER.md
 cd C:\Users\rhhyu\Documents\Portal.wiregene.com
 git pull --ff-only origin main
 npm.cmd install
+npm.cmd run build
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\write-backup-md.ps1
 ```
 
@@ -67,25 +75,13 @@ from the latest commit.
 ## Synology Commands
 
 ```sh
-APP_DIR=/volume1/docker/wiregene-portal
-REPO_URL=https://github.com/rhhyun/wiregene-portal.git
-if [ ! -d "$APP_DIR/.git" ]; then
-  if [ -e "$APP_DIR" ]; then
-    echo "ERROR: $APP_DIR exists but is not a Git checkout."
-    echo "Move it aside or set APP_DIR to the real checkout path."
-    exit 1
-  fi
-  git clone "$REPO_URL" "$APP_DIR"
-fi
-git -C "$APP_DIR" pull --ff-only origin main
-/bin/sh "$APP_DIR/scripts/synology-write-backup-md.sh"
-/bin/sh "$APP_DIR/scripts/synology-update-portal.sh"
+/bin/sh -lc 'set -eu; export PATH="/usr/local/bin:/opt/bin:/usr/bin:/bin:/usr/syno/bin:/var/packages/ContainerManager/target/usr/bin:/volume1/@appstore/ContainerManager/usr/bin:/var/packages/Docker/target/usr/bin:/volume1/@appstore/Docker/usr/bin:/var/packages/Git/target/bin:/volume1/@appstore/Git/bin:$PATH"; APP_DIR="/volume1/docker/wiregene-portal"; REPO_URL="https://github.com/rhhyun/wiregene-portal.git"; if [ ! -d "$APP_DIR/.git" ]; then if [ -e "$APP_DIR" ]; then echo "ERROR: $APP_DIR exists but is not a Git checkout."; exit 1; fi; git clone "$REPO_URL" "$APP_DIR"; fi; git -C "$APP_DIR" pull --ff-only origin main; /bin/sh "$APP_DIR/scripts/synology-update-portal.sh"'
 ```
 
 One-time or on-demand automatic identity setup:
 
 ```sh
-cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && IDENTITY_PASSWORD='<provided master password>' /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh
+/bin/sh -lc 'set -eu; cd /volume1/docker/wiregene-portal; git pull --ff-only origin main; IDENTITY_PASSWORD="<provided master password>" /bin/sh /volume1/docker/wiregene-portal/scripts/synology-auto-wiregene-identity.sh'
 ```
 
 The Synology backup writer updates this file locally. To make the updated
@@ -97,16 +93,18 @@ development machine after reviewing it.
 - `backup.md`: latest handoff snapshot.
 - `scripts/write-backup-md.ps1`: Windows backup writer.
 - `scripts/synology-write-backup-md.sh`: Synology backup writer.
-- `docs/synology-meta-portal-split.md`: transition NAS layout and scheduler notes.
-- `scripts/synology-update-portal.sh`: full Synology update, build, restart,
-  local health check, version check, and public route check.
+- `DEPLOYMENT.md`: audited finite Synology deploy standard, rollback, and verification commands.
+- `scripts/synology-deploy-common.sh`: shared lock, timeout, PATH, compose, and log rotation helper.
+- `scripts/synology-update-portal.sh`: full finite Synology update, image pull,
+  `up -d --remove-orphans`, health check, version check, and public route check.
 - `scripts/synology-auto-wiregene-identity.sh`: automatic identity/admin/shared
   auth secret setup for Portal and known subsite env files, with `wiregene`
   scoped to `search` unless explicitly changed.
 - `AUTH_RUNBOOK.md`: Portal authentication and identity propagation runbook.
 - `ERROR_LEDGER.md`: repeated auth and portal launcher errors with prevention
   rules.
-- `scripts/synology-start-portal.sh`: Synology container build/restart helper.
+- `scripts/synology-start-portal.sh`: image pull and detached compose start helper.
+- `scripts/synology-portal-status.sh`: post-deploy status and leftover-process check.
 - `synology/docker/portal/.env.example`: runtime environment template.
 - `src/lib/version.ts`: visible application version.
 
@@ -118,6 +116,8 @@ development machine after reviewing it.
 - `npx.cmd tsc --noEmit --pretty false --incremental false`
 - `npm.cmd run build`
 - On Synology, syntax-check shell scripts with `sh -n scripts/<name>.sh`.
+- On Synology after deployment:
+  `/bin/sh /volume1/docker/wiregene-portal/scripts/synology-portal-status.sh`
 - If public Portal is intended to run from Synology, confirm
   `portal.wiregene.com` does not return `Server: Vercel` or `X-Vercel-Id`
   headers. Keep Vercel only as emergency/temporary access; production ID/PW
@@ -150,7 +150,7 @@ Current production route issue as of 2026-06-12:
   `curl.exe -I https://portal.wiregene.com/`. The response must not contain
   `Server: Vercel` or `X-Vercel-Id`.
 - Synology scheduler command:
-  `cd /volume1/docker/wiregene-portal && git pull --ff-only origin main && /bin/sh /volume1/docker/wiregene-portal/scripts/synology-update-portal.sh`
+  `/bin/sh -lc 'set -eu; export PATH="/usr/local/bin:/opt/bin:/usr/bin:/bin:/usr/syno/bin:/var/packages/ContainerManager/target/usr/bin:/volume1/@appstore/ContainerManager/usr/bin:/var/packages/Docker/target/usr/bin:/volume1/@appstore/Docker/usr/bin:/var/packages/Git/target/bin:/volume1/@appstore/Git/bin:$PATH"; APP_DIR="/volume1/docker/wiregene-portal"; REPO_URL="https://github.com/rhhyun/wiregene-portal.git"; if [ ! -d "$APP_DIR/.git" ]; then if [ -e "$APP_DIR" ]; then echo "ERROR: $APP_DIR exists but is not a Git checkout."; exit 1; fi; git clone "$REPO_URL" "$APP_DIR"; fi; git -C "$APP_DIR" pull --ff-only origin main; /bin/sh "$APP_DIR/scripts/synology-update-portal.sh"'`
 - Synology public route policy:
   `PUBLIC_PORTAL_ROUTE_POLICY=synology` is mandatory. The retired value `warn`
   is treated as strict Synology mode; only `vercel-emergency` is an explicit

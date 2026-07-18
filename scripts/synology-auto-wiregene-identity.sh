@@ -12,9 +12,71 @@ AUTO_START="${AUTO_START:-true}"
 
 LOG_DIR="${PORTAL_RUNTIME_DIR}/logs"
 LOG_FILE="${LOG_DIR}/identity-auto-config.log"
+LOCK_DIR="${PORTAL_RUNTIME_DIR}/.identity.lock"
+LOG_MAX_BYTES="${LOG_MAX_BYTES:-2097152}"
+LOG_MAX_FILES="${LOG_MAX_FILES:-3}"
+
+PATH="/usr/local/bin:/opt/bin:/usr/bin:/bin:/usr/syno/bin:/var/packages/ContainerManager/target/usr/bin:/volume1/@appstore/ContainerManager/usr/bin:/var/packages/Docker/target/usr/bin:/volume1/@appstore/Docker/usr/bin:/var/packages/Git/target/bin:/volume1/@appstore/Git/bin:$PATH"
+export PATH
+
+rotate_log() {
+  [ -f "$LOG_FILE" ] || return 0
+  bytes=$(wc -c < "$LOG_FILE" 2>/dev/null | tr -d ' ' || printf "0")
+  case "$bytes" in
+    "" | *[!0-9]* ) bytes=0 ;;
+  esac
+  [ "$bytes" -le "$LOG_MAX_BYTES" ] && return 0
+
+  idx="$LOG_MAX_FILES"
+  while [ "$idx" -gt 1 ]; do
+    prev=$((idx - 1))
+    [ -f "$LOG_FILE.$prev" ] && mv "$LOG_FILE.$prev" "$LOG_FILE.$idx" 2>/dev/null || true
+    idx="$prev"
+  done
+  mv "$LOG_FILE" "$LOG_FILE.1" 2>/dev/null || true
+}
+
+cleanup_lock() {
+  if [ -d "$LOCK_DIR" ]; then
+    owner_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null || true)
+    if [ "$owner_pid" = "$$" ]; then
+      rm -rf "$LOCK_DIR"
+    fi
+  fi
+}
+
+on_signal() {
+  cleanup_lock
+  exit 130
+}
+
+acquire_lock() {
+  mkdir -p "$PORTAL_RUNTIME_DIR"
+  if mkdir "$LOCK_DIR" 2>/dev/null; then
+    printf "%s\n" "$$" > "$LOCK_DIR/pid"
+    date '+%s' > "$LOCK_DIR/started_at" 2>/dev/null || true
+    trap cleanup_lock EXIT
+    trap on_signal HUP INT TERM
+    return 0
+  fi
+
+  owner_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null || true)
+  if [ -n "$owner_pid" ] && kill -0 "$owner_pid" 2>/dev/null; then
+    printf "%s %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "Another identity auto-config job is already running. lock=$LOCK_DIR pid=$owner_pid" | tee -a "$LOG_FILE" >&2
+    exit 75
+  fi
+
+  rm -rf "$LOCK_DIR"
+  mkdir "$LOCK_DIR" || fail "Could not acquire lock: $LOCK_DIR"
+  printf "%s\n" "$$" > "$LOCK_DIR/pid"
+  date '+%s' > "$LOCK_DIR/started_at" 2>/dev/null || true
+  trap cleanup_lock EXIT
+  trap on_signal HUP INT TERM
+}
 
 log() {
   mkdir -p "$LOG_DIR"
+  rotate_log
   printf "%s %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG_FILE" >&2
 }
 
@@ -39,16 +101,16 @@ compose_up() {
   runtime_dir=$(dirname "$compose_file")
 
   if docker compose version >/dev/null 2>&1; then
-    docker compose -f "$compose_file" --env-file "$env_file" up -d
+    docker compose -f "$compose_file" --env-file "$env_file" up -d --remove-orphans
     return
   fi
 
   if command -v docker-compose >/dev/null 2>&1; then
-    if docker-compose -f "$compose_file" --env-file "$env_file" up -d; then
+    if docker-compose -f "$compose_file" --env-file "$env_file" up -d --remove-orphans; then
       return
     fi
     log "docker-compose rejected --env-file; retrying from $runtime_dir."
-    (cd "$runtime_dir" && docker-compose -f docker-compose.yml up -d)
+    (cd "$runtime_dir" && docker-compose -f docker-compose.yml up -d --remove-orphans)
     return
   fi
 
@@ -60,7 +122,7 @@ ensure_repo() {
 
   if [ -d "$PORTAL_SOURCE_DIR/.git" ]; then
     log "Updating portal source checkout at $PORTAL_SOURCE_DIR."
-    git -C "$PORTAL_SOURCE_DIR" pull --ff-only origin main || log "WARNING: git pull failed; continuing with local checkout."
+    git -C "$PORTAL_SOURCE_DIR" pull --ff-only origin main || fail "git pull failed; refusing to continue with stale checkout."
     return
   fi
 
@@ -82,8 +144,14 @@ ensure_portal_env() {
     else
       cat > "$PORTAL_RUNTIME_DIR/.env" <<EOF
 APP_SOURCE_DIR=$PORTAL_SOURCE_DIR
+PORTAL_IMAGE=ghcr.io/rhhyun/wiregene-portal:latest
 HOST_PORT=3002
 CONTAINER_NAME=wiregene-portal
+PORTAL_DEPLOY_TIMEOUT_SECONDS=900
+PORTAL_COMPOSE_PULL_TIMEOUT_SECONDS=300
+PORTAL_COMPOSE_UP_TIMEOUT_SECONDS=300
+PORTAL_HEALTH_TIMEOUT_SECONDS=120
+PORTAL_LOCAL_HEALTH_URL=http://127.0.0.1:3002/api/health
 
 APP_BASE_URL=https://portal.wiregene.com
 PUBLIC_PORTAL_HOST=portal.wiregene.com
@@ -434,7 +502,7 @@ patch_compose_file() {
   if ! grep -q '^version:' "$file"; then
     tmp="$file.tmp.$$"
     {
-      echo 'version: "3.8"'
+      echo 'version: "3.3"'
       cat "$file"
     } > "$tmp"
     mv "$tmp" "$file"
@@ -559,6 +627,9 @@ restart_known_services() {
 }
 
 main() {
+  mkdir -p "$LOG_DIR"
+  rotate_log
+  acquire_lock
   log "Wiregene identity auto-configuration started."
   ensure_repo
   ensure_portal_env

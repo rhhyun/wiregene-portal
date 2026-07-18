@@ -5,85 +5,46 @@ APP_DIR="${APP_DIR:-/volume1/docker/wiregene-portal}"
 RUNTIME_DIR="${PORTAL_RUNTIME_DIR:-/volume1/docker/portal}"
 PACKAGE_DIR="$APP_DIR/synology/docker/portal"
 LOG_DIR="${PORTAL_LOG_DIR:-$RUNTIME_DIR/logs}"
-LOG_FILE="$LOG_DIR/scheduler-start.log"
+COMMON_SCRIPT="$APP_DIR/scripts/synology-deploy-common.sh"
+
+[ -f "$COMMON_SCRIPT" ] || {
+  printf "%s\n" "ERROR: common deploy helper was not found: $COMMON_SCRIPT" >&2
+  exit 1
+}
+
+. "$COMMON_SCRIPT"
+synology_deploy_setup_path
+synology_deploy_set_log "$LOG_DIR" "scheduler-start.log"
 
 log() {
-  mkdir -p "$LOG_DIR"
-  printf "%s %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG_FILE"
+  synology_deploy_log "$*"
 }
 
 fail() {
   log "ERROR: $*"
+  if [ -n "${SYN_DEPLOY_DOCKER_BIN:-}" ]; then
+    synology_deploy_tail_container_logs "${CONTAINER_NAME:-wiregene-portal}" 120
+  fi
   exit 1
 }
 
-compose() {
-  if docker compose version >/dev/null 2>&1; then
-    docker compose "$@"
-  elif command -v docker-compose >/dev/null 2>&1; then
-    docker-compose "$@"
-  else
-    fail "Docker Compose was not found. Install Synology Container Manager or docker-compose."
-  fi
+env_value() {
+  key="$1"
+  synology_deploy_env_value "$key" "$RUNTIME_DIR/.env"
 }
 
-compose_runtime() {
-  if docker compose version >/dev/null 2>&1; then
-    docker compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" "$@"
-    return
-  fi
-
-  if command -v docker-compose >/dev/null 2>&1; then
-    if docker-compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" "$@"; then
-      return
-    fi
-
-    log "docker-compose rejected --env-file or failed with absolute runtime paths; retrying from $RUNTIME_DIR without --env-file."
-    (cd "$RUNTIME_DIR" && docker-compose -f docker-compose.yml "$@")
-    return
-  fi
-
-  fail "Docker Compose was not found. Install Synology Container Manager or docker-compose."
-}
-
-log_docker_versions() {
-  docker --version 2>/dev/null | while IFS= read -r line; do
-    log "$line"
-  done
-
-  if docker compose version >/dev/null 2>&1; then
-    docker compose version 2>/dev/null | while IFS= read -r line; do
-      log "$line"
-    done
-  elif command -v docker-compose >/dev/null 2>&1; then
-    docker-compose --version 2>/dev/null | while IFS= read -r line; do
-      log "$line"
-    done
-  fi
-}
-
-validate_compose_config() {
-  if ! compose_runtime config >/dev/null; then
-    fail "Docker Compose could not read $RUNTIME_DIR/docker-compose.yml. The runtime copy has been refreshed from $PACKAGE_DIR; check the Compose error above."
-  fi
-}
-
-build_app() {
-  log "Installing dependencies and building Wiregene Portal before service restart."
-  compose_runtime run --rm --no-deps portal sh -lc '
-    set -eu
-    node -v
-    npm -v
-    export NPM_CONFIG_PRODUCTION=false npm_config_production=false
-    if [ -f package-lock.json ]; then npm ci --include=dev; else npm install --include=dev; fi
-    npm run build
-  '
-  log "Wiregene Portal build completed."
+env_or_default() {
+  key="$1"
+  default_value="$2"
+  current="$(env_value "$key" || true)"
+  [ -n "$current" ] || current="$default_value"
+  printf "%s" "$current"
 }
 
 verify_account_storage_volume() {
+  storage_probe_timeout="$(env_or_default PORTAL_STORAGE_PROBE_TIMEOUT_SECONDS 60)"
   log "Verifying Portal account storage volume with create, rename, and delete operations."
-  compose_runtime run --rm --no-deps portal sh -lc '
+  synology_deploy_run_with_timeout "$storage_probe_timeout" synology_deploy_compose_runtime "$RUNTIME_DIR/docker-compose.yml" "$RUNTIME_DIR/.env" run --rm --no-deps portal sh -lc '
     set -eu
     directory=/app/.data/portal
     temporary="$directory/.portal-storage-probe-$$.tmp"
@@ -95,7 +56,7 @@ verify_account_storage_volume() {
     test -s "$completed"
     rm -f "$completed"
     trap - EXIT HUP INT TERM
-  '
+  ' || fail "Portal account storage volume probe failed."
   log "Portal account storage volume is writable."
 }
 
@@ -114,11 +75,6 @@ prepare_runtime() {
   fi
 }
 
-env_value() {
-  key="$1"
-  sed -n "s/^${key}=//p" "$RUNTIME_DIR/.env" | tail -n 1 | sed "s/\r$//"
-}
-
 warn_unexpected_value() {
   key="$1"
   expected="$2"
@@ -135,6 +91,7 @@ warn_runtime_env() {
   admin_emails=$(env_value WIREGENE_ADMIN_EMAILS)
   admin_users=$(env_value APP_ADMIN_USERS)
   admin_user=$(env_value APP_ADMIN_USER)
+  portal_image=$(env_value PORTAL_IMAGE)
 
   if [ -z "$auth_users" ] && { [ -z "$auth_user" ] || [ -z "$auth_password" ]; }; then
     fail "No complete Basic Auth credential found in $RUNTIME_DIR/.env. Run $APP_DIR/scripts/synology-migrate-auth-env.sh or set APP_BASIC_AUTH_USERS / APP_BASIC_AUTH_USER + APP_BASIC_AUTH_PASSWORD."
@@ -144,24 +101,53 @@ warn_runtime_env() {
     log "WARNING: No admin key found in $RUNTIME_DIR/.env. Set WIREGENE_ADMIN_EMAILS or APP_ADMIN_USERS if an admin badge/permission list is required."
   fi
 
+  if [ -z "$portal_image" ]; then
+    log "WARNING: PORTAL_IMAGE is empty in $RUNTIME_DIR/.env. Compose will use ghcr.io/rhhyun/wiregene-portal:latest."
+  fi
+
   warn_unexpected_value APP_SOURCE_DIR "$APP_DIR"
   warn_unexpected_value HOST_PORT "3002"
   warn_unexpected_value CONTAINER_NAME "wiregene-portal"
   warn_unexpected_value WIREGENE_APP_MODE "portal"
 }
 
+validate_compose_config() {
+  synology_deploy_run_with_timeout 60 synology_deploy_compose_runtime "$RUNTIME_DIR/docker-compose.yml" "$RUNTIME_DIR/.env" config >/dev/null || fail "Docker Compose could not read $RUNTIME_DIR/docker-compose.yml."
+}
+
+start_service() {
+  pull_timeout="$(env_or_default PORTAL_COMPOSE_PULL_TIMEOUT_SECONDS 300)"
+  up_timeout="$(env_or_default PORTAL_COMPOSE_UP_TIMEOUT_SECONDS 300)"
+  health_timeout="$(env_or_default PORTAL_HEALTH_TIMEOUT_SECONDS 120)"
+  container_name="$(env_or_default CONTAINER_NAME wiregene-portal)"
+  host_port="$(env_or_default HOST_PORT 3002)"
+  health_url="$(env_or_default PORTAL_LOCAL_HEALTH_URL "http://127.0.0.1:$host_port/api/health")"
+
+  log "Pulling prebuilt Portal image."
+  synology_deploy_run_with_timeout "$pull_timeout" synology_deploy_compose_runtime "$RUNTIME_DIR/docker-compose.yml" "$RUNTIME_DIR/.env" pull portal || fail "Docker image pull failed. Existing running container and volumes were not removed."
+
+  verify_account_storage_volume
+
+  log "Starting Portal with docker compose up -d --remove-orphans."
+  synology_deploy_run_with_timeout "$up_timeout" synology_deploy_compose_runtime "$RUNTIME_DIR/docker-compose.yml" "$RUNTIME_DIR/.env" up -d --remove-orphans || fail "Docker Compose up failed. Existing persistent volumes were not removed."
+
+  synology_deploy_wait_container_healthy "$container_name" "$health_timeout" 3
+  synology_deploy_wait_http "$health_url" "200" "$health_timeout" 2
+  synology_deploy_run_with_timeout 30 synology_deploy_compose_runtime "$RUNTIME_DIR/docker-compose.yml" "$RUNTIME_DIR/.env" ps || true
+}
+
 main() {
+  if [ "${PORTAL_DEPLOY_LOCK_HELD:-}" != "1" ]; then
+    synology_deploy_acquire_lock "${PORTAL_DEPLOY_LOCK_DIR:-$RUNTIME_DIR/.deploy.lock}" "wiregene-portal-start"
+  fi
+
   log "Wiregene Portal DSM scheduler start requested."
   prepare_runtime
   warn_runtime_env
-  log_docker_versions
-  export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-wiregene-portal}"
+  synology_deploy_detect_compose
   validate_compose_config
-  build_app
-  verify_account_storage_volume
-  log "Starting Wiregene Portal from $RUNTIME_DIR."
-  compose_runtime up -d --force-recreate
-  log "Wiregene Portal start requested. Check logs with: docker logs wiregene-portal"
+  start_service
+  log "Wiregene Portal start completed."
 }
 
 main "$@"

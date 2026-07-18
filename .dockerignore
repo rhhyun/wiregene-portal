@@ -1,0 +1,14 @@
+.codex
+.codex-logs
+.data
+.env
+.env.*
+.git
+.github
+.logs
+.next
+.vercel
+node_modules
+npm-debug.log*
+synology/docker/portal/data
+synology/docker/portal/logs

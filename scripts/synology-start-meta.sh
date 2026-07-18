@@ -83,7 +83,7 @@ main() {
   prepare_runtime
   warn_runtime_env
   log "Starting Wiregene Meta from $RUNTIME_DIR."
-  compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" up -d
+  compose -f "$RUNTIME_DIR/docker-compose.yml" --env-file "$RUNTIME_DIR/.env" up -d --remove-orphans
   log "Wiregene Meta start requested. Check logs with: docker logs wiregene-meta"
 }
 
