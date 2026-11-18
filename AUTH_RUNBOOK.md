@@ -29,15 +29,17 @@ The Portal site registry currently includes:
 - `meta.wiregene.com`
 - `finance.wiregene.com`
 - `hyunlab.wiregene.com`
-- `hyun.wiregene.com`
+- `www.wiregene.com/hyunlab`
 - `sci-experiment.wiregene.com`
 - `sci-bbb.wiregene.com`
-- `sci-bbb-ai.wiregene.com`
 - `arim.wiregene.com`
 - `dmfoot.wiregene.com`
 
 Internal worker, preview, test, and typo-alias hosts are not promoted as normal
 first-screen user links unless their service becomes a user-facing site.
+The existing `behavior-ai` permission opens `sci-bbb.wiregene.com`, the same
+site as `behavior`. Existing account assignments continue to work with either
+permission.
 
 ## Synology Identity Setup
 

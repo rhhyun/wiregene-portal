@@ -1,6 +1,6 @@
 # Wiregene Work Backup
 
-Generated: 2026-07-18 03:39:22 -05:00
+Updated: 2026-11-18
 
 This file is a safe handoff note for continuing the project on another PC.
 Do not store passwords, tokens, API keys, cookies, or private environment
@@ -11,18 +11,19 @@ values in this file.
 - Repository: wiregene-portal
 - Remote: https://github.com/rhhyun/wiregene-portal.git
 - Branch: main
-- Base commit before this backup refresh: 8eb290a Preserve UTF-8 Portal handoff notes
-- App version: Ver 1.74
+- Release base commit: `59ba69a` Harden Synology portal deployment
+- App version: Ver 1.7.5
 
-## Git Status At Generation
+## 2026-11-18 Portal Link Release
 
-Env-like paths and backup.md are intentionally omitted from this section.
-
-```text
-M ERROR_LEDGER.md
- M scripts/synology-write-backup-md.sh
- M scripts/write-backup-md.ps1
-```
+- The launcher and account links send Hyun Lab visitors to
+  `https://www.wiregene.com/hyunlab` and SCI BBB AI 2 visitors to
+  `https://sci-bbb.wiregene.com`. Both former hosts return NXDOMAIN.
+- Site permissions and historical aliases still resolve to their existing
+  permission IDs. Release numbering uses explicit minor and patch components
+  from this release forward. The previous compact display was `Ver 1.74`.
+- Continue from the release verification and deployment handoff in
+  [runs/2026-11-18-canonical-portal-links/README.md](runs/2026-11-18-canonical-portal-links/README.md).
 
 ## Active Work Summary
 
@@ -62,9 +63,10 @@ M ERROR_LEDGER.md
 ## Continue On Another PC
 
 ```powershell
-cd C:\Users\rhhyu\Documents\Portal.wiregene.com
+cd wiregene-portal
+git switch main
 git pull --ff-only origin main
-npm.cmd install
+npm.cmd ci
 npm.cmd run build
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\write-backup-md.ps1
 ```
